@@ -70,8 +70,9 @@ file at your project root says `LOCKED`.
 
 - Opt-in: does nothing until you create `.approval-gate`.
 - Working docs (`spec.md`, `plan.md`, `phase-log.md`) stay editable while locked.
-- **Only you can unlock**, from your own shell — Claude cannot, because its own
-  write to the gate file is blocked too:
+- **Only you can unlock**, from your own shell — Claude cannot, because any
+  attempt to modify the gate file is blocked whether it comes through the edit
+  tools *or* Bash (redirection, `tee`, `mv`, `sed -i`, `Set-Content`, ...):
 
 ```shell
 ! echo LOCKED > .approval-gate      # activate + lock

@@ -1,0 +1,29 @@
+name: validate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Static plugin validation
+        run: python scripts/validate_plugin.py .
+
+      # Optional: the Claude Code CLI's own validator, if available in CI.
+      # Non-blocking because the CLI may not be installed on the runner.
+      - name: claude plugin validate (best-effort)
+        continue-on-error: true
+        run: |
+          if command -v claude >/dev/null 2>&1; then
+            claude plugin validate .
+          else
+            echo "claude CLI not available on runner; skipping."
+          fi
