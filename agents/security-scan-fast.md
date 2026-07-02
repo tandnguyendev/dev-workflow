@@ -24,6 +24,8 @@ Return (your final message is the returned data):
 - A list of findings, each with: severity (Critical/High/Medium/Low),
   file:line, a short description, and a suggested fix.
 - If nothing obvious is found, say "No obvious vulnerabilities found (fast pass)"
-  rather than inventing findings.
+  and cite the concrete surfaces you checked (which files/entry points, which
+  categories from the checklist) — a clean verdict must show what was scanned, not
+  just assert safety.
 Do not run commands that require permission. Do not suggest changes outside the
 security scope.

@@ -7,6 +7,7 @@ approval state are not lost to context rot. Prints a short status block to
 stdout (which SessionStart injects into context). Stays SILENT when no workflow
 is active (no phase-log.md), so it never adds noise to unrelated sessions.
 """
+import json
 import os
 import re
 import sys
@@ -19,13 +20,25 @@ except Exception:
     pass
 
 
-def project_dir():
-    # Read (and ignore) stdin so we don't block if the host pipes JSON in.
+def read_input():
+    """Return (project_dir, source). `source` is the SessionStart trigger —
+    "startup" | "resume" | "clear" | "compact" — used to tailor the reminder."""
+    raw = ""
     try:
-        sys.stdin.read()
+        raw = sys.stdin.read()
     except Exception:
         pass
-    return os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    source = ""
+    cwd = ""
+    if raw.strip():
+        try:
+            data = json.loads(raw) or {}
+            source = data.get("source", "") or ""
+            cwd = data.get("cwd", "") or ""
+        except Exception:
+            pass
+    root = os.environ.get("CLAUDE_PROJECT_DIR") or cwd or os.getcwd()
+    return root, source
 
 
 def read(path):
@@ -59,7 +72,7 @@ def title_from(text, prefix):
 
 
 def main():
-    root = project_dir()
+    root, source = read_input()
     ddir, slug = docs_dir(root)
     log = read(os.path.join(ddir, "phase-log.md"))
     if not log:
@@ -69,9 +82,9 @@ def main():
                or title_from(read(os.path.join(ddir, "spec.md")) or "", "Spec:")
                or slug or "(unnamed)")
 
-    # Phase headings and their approval state.
+    # Phase headings (and the Final review section) and their approval state.
     phases = []
-    for m in re.finditer(r"^##\s+(Phase[^\n]*)$", log, re.MULTILINE):
+    for m in re.finditer(r"^##\s+(Phase[^\n]*|Final review[^\n]*)$", log, re.MULTILINE):
         block = log[m.end():]
         nxt = re.search(r"^##\s+", block, re.MULTILINE)
         block = block[:nxt.start()] if nxt else block
@@ -87,7 +100,13 @@ def main():
         first = next((l.strip() for l in gate.splitlines() if l.strip()), "")
         gate_state = first.upper() or "empty"
 
-    lines = ["[dev-workflow] Active feature: " + feature]
+    lines = []
+    if source == "compact":
+        # Context was just compacted; the summary may have dropped workflow state.
+        lines.append("[dev-workflow] Context was just compacted — summarized memory "
+                     "may have lost workflow state. The files below are the source of "
+                     "truth; re-read them before acting.")
+    lines.append("[dev-workflow] Active feature: " + feature)
     if phases:
         done = sum(1 for _, ok in phases if ok)
         lines.append(f"  Phases: {done}/{len(phases)} approved"

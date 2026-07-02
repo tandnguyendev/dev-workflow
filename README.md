@@ -136,3 +136,26 @@ since the checkpoint are left in place (they show in `git status`).
   respects it) — otherwise untracked secrets get recorded in the refs.
 - Requires `python` on PATH (Windows: ensure `python`, not only `py`).
 - Add `.dev-workflow/` to your project `.gitignore` (the feature workflow uses it).
+
+## Context re-injection (survives /compact)
+
+A `SessionStart` hook (`hooks/status.py`) re-surfaces the active feature, phase
+progress, and gate state into context on every session start — **including after
+a `/compact` or auto-compaction** (it fires with `source: "compact"` and adds a
+stronger "context was just compacted — re-read the files" reminder). This keeps
+the workflow's file-based source of truth (`spec.md` / `plan.md` / `phase-log.md`)
+from being lost to context rot. It stays silent when no workflow is active.
+
+## Evidence gate (proof, not "looks fine")
+
+The workflow's completion checkpoints ask for *cited proof*, not assertions. Each
+phase's `phase-log.md` has an `- Evidence:` ledger that must be filled with
+concrete artifacts — test/command output, `file:line` references, the specific
+cases verified — one per acceptance criterion. The review subagents are instructed
+to back every verdict (pass or fail) with what they actually checked.
+
+A `Stop` hook (`hooks/evidence_guard.py`) enforces this: if you end a turn with the
+current phase marked reviewed but its Evidence ledger still empty, it blocks once
+and asks you to fill cited proof before yielding for approval. It is fail-open and
+nudges **at most once per stop** (it honors `stop_hook_active`), so it can never
+hard-lock a turn, and stays silent unless a dev-workflow phase-log is active.

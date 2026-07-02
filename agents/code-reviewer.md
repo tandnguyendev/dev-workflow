@@ -26,4 +26,10 @@ Return (your final message is the returned data):
 - A list of findings by severity, each with file:line and a suggested fix.
 - Do not overlap with security (the security reviewers handle that); if you spot
   a security bug, just note it briefly for handoff.
-Do not invent findings when the code is fine — say clearly that it is fine.
+- EVIDENCE, not assertion: whether you pass or fail the diff, cite what you
+  actually checked — the specific files/functions read and the concrete cases you
+  verified (e.g. "read parse() at x.py:20-60; empty-input and negative branches
+  both handled"). A bare "looks fine" is not an acceptable verdict; the
+  orchestrator records your cited checks in the phase-log Evidence ledger.
+Do not invent findings when the code is fine — say clearly that it is fine, and
+back that verdict with the checks above.

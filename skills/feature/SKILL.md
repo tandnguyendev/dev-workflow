@@ -88,6 +88,11 @@ For each phase in `plan.md`, in order:
    only if the change touches security-sensitive code.
 3. Summarize both reviews for the user. Update `phase-log.md`.
    - If reviewers found issues, have `coder` fix them, then re-review.
+   - **Fill the phase's `- Evidence:` ledger** with CITED proof that the phase
+     works: test/command output, `file:line` references, the concrete cases
+     verified — one artifact per acceptance criterion. No "looks fine" without an
+     artifact. (A `Stop`-hook evidence gate will nudge you if you try to yield for
+     approval with an empty ledger.)
 4. **CHECKPOINT: the user reviews AFTER the AI. Stop and wait for approval.**
    Only when the user approves, mark the phase APPROVED in `phase-log.md` and
    move to the next phase. Never advance an unapproved phase.
@@ -104,7 +109,9 @@ For each phase in `plan.md`, in order:
      review could not see. Do NOT re-review each file from scratch; that was
      already done per phase.
    - `security-audit` (deep pass) for cross-phase interaction vulnerabilities.
-2. Summarize findings, update `phase-log.md` final section.
+2. Summarize findings, update `phase-log.md` final section, and fill its
+   `- Evidence:` line with feature-level proof (test-suite result, the validation
+   command output, the key end-to-end invariants checked).
 3. If issues found, fix via `coder` and re-audit.
 4. **CHECKPOINT: present the final result and stop for the user's sign-off.**
 
