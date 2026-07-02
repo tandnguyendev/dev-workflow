@@ -4,3 +4,7 @@
 /plan.md
 /phase-log.md
 /CLAUDE.md
+
+# Python bytecode from local testing
+__pycache__/
+*.pyc
