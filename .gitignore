@@ -1,9 +1,15 @@
-# Keep working docs OUT of the plugin repo — they belong in the consuming
-# project. Leading slash anchors to repo root so templates/*.md are still shipped.
+# Keep runtime working docs OUT of the plugin repo — they belong in the consuming
+# project and are only created here when testing the plugin's own skills on this
+# repo. Leading slash anchors to root so templates/*.md are still shipped.
 /spec.md
 /plan.md
 /phase-log.md
+/conventions.md
 /CLAUDE.md
+
+# Runtime state the feature workflow / approval gate create in a consuming project
+.dev-workflow/
+.approval-gate
 
 # Python bytecode from local testing
 __pycache__/
