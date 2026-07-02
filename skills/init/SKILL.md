@@ -16,8 +16,11 @@ workflow to rely on.
      etc.), framework imports, and the directory layout.
    - Infer the DOMAIN from names, models/entities, routes, and any existing docs
      (README, docs/). Examples: fintech, healthcare, e-commerce, dev tooling.
-   - Note existing coding conventions (lint/format config, test setup, error
-     patterns) and architecture/module boundaries.
+   - Note existing coding conventions and architecture/module boundaries. In
+     particular, detect the linter/formatter and record the EXACT command to run
+     them (e.g. `ruff check`, `npm run lint`, `gofmt -l`, `cargo fmt`) plus the
+     test command, and any naming/error-handling patterns the code already
+     follows. These are what the coder runs and the reviewer enforces.
    - If a `CLAUDE.md` already exists, read it and reuse its content — do not
      duplicate or overwrite it; complement it.
 2. Draft `conventions.md` using the section structure from the plugin template
@@ -31,4 +34,7 @@ workflow to rely on.
 - Be concrete and specific to THIS project — no generic filler.
 - Do not modify source code. The only file you create/update is `conventions.md`.
 - If the project is empty/greenfield, ask the user a few targeted questions about
-  the intended domain and stack, then draft from their answers.
+  the intended domain and stack, then draft from their answers. For the Coding
+  conventions section, seed a sensible starting default from the plugin's
+  `references/clean-code.md` and label it as a baseline to refine — do not leave
+  it blank.

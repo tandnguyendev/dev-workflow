@@ -66,6 +66,14 @@ project-local). So domain context is supplied per-project via `conventions.md`:
   the domain from your feature description plus a quick scan of the code, and the
   reviewers apply a generic security checklist.
 
+## Coding conventions
+
+The `coder` follows `conventions.md` and the surrounding code's style, and runs
+the project's configured formatter/linter after each change; the `code-reviewer`
+enforces the same. For greenfield code with no stated convention, both fall back
+to a minimal, explicitly subordinate baseline in `references/clean-code.md`
+(the linter and project conventions always win).
+
 ## Hard approval gate (PreToolUse hook)
 
 The workflow's checkpoints are behavioral (Claude is instructed to stop). For a

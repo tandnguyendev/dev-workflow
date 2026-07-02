@@ -23,7 +23,10 @@
 
 ## Coding conventions
 > Style, naming, error-handling patterns, testing approach, things reviewers
-> should enforce.
+> should enforce. Name the linter/formatter and the EXACT command to run them
+> (e.g. `ruff check` / `npm run lint` / `gofmt -l`) and the test command — the
+> coder runs these and the reviewer enforces them. Objective tooling beats prose.
+> (Greenfield with no conventions yet? Start from `references/clean-code.md`.)
 
 ## Domain-specific correctness rules
 > Invariants that MUST hold for this domain. Examples by domain:

@@ -15,6 +15,10 @@ Focus on:
   overflow, null/None, concurrency).
 - Violations of the conventions or domain-specific correctness rules stated in
   `conventions.md`.
+- Whether the project's formatter/linter would be satisfied — flag obvious
+  violations. For greenfield code with no stated convention, judge against the
+  clean-code baseline (`references/clean-code.md`), always subordinate to the
+  project's own linter/conventions/local style.
 - Error handling and failure states (partial writes, rollback, retries).
 - Unnecessarily complex or duplicated code that could be reused/simplified.
 

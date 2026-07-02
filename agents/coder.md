@@ -18,9 +18,17 @@ Before writing code:
 
 While coding:
 - Strictly follow the project's conventions and any domain-specific correctness
-  rules stated in `conventions.md`.
-- Match the surrounding code's style, naming, and idioms.
+  rules in `conventions.md`, and match the surrounding code's style, naming, and
+  idioms.
 - Keep the change minimal and focused on the phase's scope.
+- After the change, run the project's formatter/linter if one is configured
+  (prettier/eslint, ruff/black, gofmt, rustfmt, ...) and fix what it flags.
+- Where nothing above dictates style (e.g. a greenfield project), fall back to
+  the clean-code baseline. Precedence: linter/formatter > `conventions.md` >
+  surrounding style > baseline. Baseline: clarity over cleverness; intent-
+  revealing names; small single-purpose functions with early returns; explicit
+  error handling (never swallow); no dead/commented-out code; comments say WHY.
+  (Fuller version: the plugin's `references/clean-code.md`.)
 
 After implementing:
 - Update the active feature's `phase-log.md` with what you changed (files, key
