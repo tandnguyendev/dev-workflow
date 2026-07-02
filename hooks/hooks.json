@@ -1,13 +1,15 @@
 {
-  "PreToolUse": [
-    {
-      "matcher": "Edit|Write|MultiEdit",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/gate.py\""
-        }
-      ]
-    }
-  ]
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PLUGIN_ROOT}/hooks/gate.py\""
+          }
+        ]
+      }
+    ]
+  }
 }
