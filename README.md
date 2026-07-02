@@ -15,7 +15,9 @@ feature description and the surrounding code.
 |-----------|------|-------|---------|
 | `/dev-workflow:init` | skill | session model | Inspect the project, draft `conventions.md` |
 | `/dev-workflow:feature` | skill (orchestrator) | session model | Drive the whole feature workflow |
+| `/dev-workflow:status` | command | session model | On-demand readout of the active feature/phase/gate |
 | `domain-researcher` | agent | inherit | Read-only + web research of domain/stack best practices |
+| `solution-architect` | agent | inherit | Produce one solution option from an assigned angle (panel) |
 | `coder` | agent | Opus 4.8 | Implement one planned phase |
 | `code-reviewer` | agent | inherit | Logic/quality review, read-only |
 | `security-scan-fast` | agent | Fable 5 | Fast per-phase security scan |

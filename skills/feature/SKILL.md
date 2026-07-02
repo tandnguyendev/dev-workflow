@@ -30,11 +30,16 @@ the user. Coding is delegated to the `coder` subagent.
 3. Present a short summary to the user. **CHECKPOINT: stop, ask if the research
    direction looks right before proposing solutions.**
 
-## Stage 2 — Solution options
-1. Based on the research, produce AT LEAST 3 solution options with tradeoffs
-   (complexity / performance / security risk / effort). Fill `spec.md` section 3.
-2. Give your recommendation (first option), but do not decide for the user.
-3. **CHECKPOINT: use AskUserQuestion (or a plain question) so the user picks an
+## Stage 2 — Solution options (independent panel)
+1. Spawn ~3 `solution-architect` subagents IN PARALLEL, each with a DIFFERENT
+   assigned angle (simplicity-first, performance-first, risk-first), passing the
+   feature description and the research summary. Independent context per agent
+   reduces single-thread bias.
+2. Synthesize their returned options into `spec.md` section 3 as a comparison
+   table (complexity / performance / security risk / effort). Merge near-
+   duplicates but keep at least 3 distinct options.
+3. Give your recommendation (put it first), but do not decide for the user.
+4. **CHECKPOINT: use AskUserQuestion (or a plain question) so the user picks an
    option. Stop and wait.** Then record the choice + rationale in `spec.md`
    sections 4–5.
 
@@ -56,6 +61,11 @@ For each phase in `plan.md`, in order:
 4. **CHECKPOINT: the user reviews AFTER the AI. Stop and wait for approval.**
    Only when the user approves, mark the phase APPROVED in `phase-log.md` and
    move to the next phase. Never advance an unapproved phase.
+5. After approval, if the project is a git repository and the user wants
+   per-phase commits, create a commit scoped to this phase with a message
+   derived from the phase title and its `phase-log.md` summary (e.g.
+   `Phase N: <title>`). Skip if not a git repo or the user prefers one final
+   commit. This keeps the final-audit diff clean and ties phases to history.
 
 ## Stage 5 — Final review (whole feature)
 1. Run over the FULL diff of all phases (not just the last):
