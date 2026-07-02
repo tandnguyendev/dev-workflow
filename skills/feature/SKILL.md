@@ -1,24 +1,28 @@
 ---
 name: feature
-description: Orchestrate a full spec-driven feature workflow for the finance project — research, solution options, plan, phased implementation with per-phase reviews, and a final audit. Stops for user approval at every checkpoint.
+description: Orchestrate a full spec-driven feature workflow — detect domain/conventions, research, solution options, plan, phased implementation with per-phase reviews, and a final audit. Domain-agnostic. Stops for user approval at every checkpoint.
 ---
 
 # Feature workflow (orchestrator)
 
 You are the ORCHESTRATOR for building a new feature. You do not do research or
 review yourself — you delegate those to subagents and keep the conversation with
-the user. Coding is delegated to the `coder` subagent (Model B).
+the user. Coding is delegated to the `coder` subagent.
 
 **Golden rules**
-- The source of truth is FILES (`spec.md`, `plan.md`, `phase-log.md`), not this
-  conversation. Write decisions to files as you go; re-read them if unsure.
+- The source of truth is FILES (`conventions.md`, `spec.md`, `plan.md`,
+  `phase-log.md`), not this conversation. Write decisions to files as you go;
+  re-read them if unsure.
 - STOP at every checkpoint below and wait for the user. NEVER skip a checkpoint
-  or proceed without explicit approval. This is a finance project — an
-  unapproved phase must never advance.
+  or proceed without explicit approval. An unapproved phase must never advance.
 - If the user gave the feature description as arguments, use it; otherwise ask
   for it first.
 
-Follow `CLAUDE.md` conventions throughout.
+## Stage 0 — Establish domain/conventions
+- If `conventions.md` exists, read it — that is the domain + engineering context.
+- If it does NOT exist, tell the user they can run `/dev-workflow:init` first for
+  richer context; otherwise proceed, and rely on `domain-researcher` inferring
+  the domain from the feature description and the code.
 
 ## Stage 1 — Research
 1. Spawn the `domain-researcher` subagent with the feature description.
@@ -30,14 +34,13 @@ Follow `CLAUDE.md` conventions throughout.
 1. Based on the research, produce AT LEAST 3 solution options with tradeoffs
    (complexity / performance / security risk / effort). Fill `spec.md` section 3.
 2. Give your recommendation (first option), but do not decide for the user.
-3. **CHECKPOINT: use AskUserQuestion (or plain question) so the user picks an
+3. **CHECKPOINT: use AskUserQuestion (or a plain question) so the user picks an
    option. Stop and wait.** Then record the choice + rationale in `spec.md`
    sections 4–5.
 
 ## Stage 3 — Plan
 1. Enter Plan Mode (ask the user to press Shift+Tab twice, or reason in a
-   read-only planning stance — remember Plan Mode is behavioral, not a hard
-   write-lock).
+   read-only planning stance — Plan Mode is behavioral, not a hard write-lock).
 2. Map the files to change and break the work into small phases. Write `plan.md`.
 3. **CHECKPOINT: present the plan, stop, and get the user to approve or edit it
    before any code is written.**
@@ -47,7 +50,7 @@ For each phase in `plan.md`, in order:
 1. Delegate implementation of THIS phase only to the `coder` subagent.
 2. When it returns, run the reviews IN PARALLEL:
    - `code-reviewer` (logic/quality)
-   - `security-scan-fast` (Fable 5, fast security pass)
+   - `security-scan-fast` (fast security pass)
 3. Summarize both reviews for the user. Update `phase-log.md`.
    - If reviewers found issues, have `coder` fix them, then re-review.
 4. **CHECKPOINT: the user reviews AFTER the AI. Stop and wait for approval.**
@@ -57,7 +60,7 @@ For each phase in `plan.md`, in order:
 ## Stage 5 — Final review (whole feature)
 1. Run over the FULL diff of all phases (not just the last):
    - `code-reviewer` on the full diff.
-   - `security-audit` (Opus, deep pass) for cross-phase interaction bugs.
+   - `security-audit` (deep pass) for cross-phase interaction bugs.
 2. Summarize findings, update `phase-log.md` final section.
 3. If issues found, fix via `coder` and re-audit.
 4. **CHECKPOINT: present the final result and stop for the user's sign-off.**
@@ -66,5 +69,6 @@ For each phase in `plan.md`, in order:
 - Subagents cannot pause to ask the user mid-task; keep each delegated task
   well-scoped from the files. If a phase is ambiguous, resolve it with the user
   BEFORE delegating.
-- Reviewers are read-only and objective (fresh context). Coding stays with
-  `coder`/Opus so reviewers judge someone else's code.
+- Reviewers are read-only and objective (fresh context). Coding stays with the
+  `coder` agent so reviewers judge someone else's code.
+- For a hard-enforced approval gate, see the `.approval-gate` hook in the README.

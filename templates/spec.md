@@ -23,5 +23,6 @@ accepted.>
 ## 5. Non-goals / out of scope
 <Explicitly what we are NOT doing in this feature.>
 
-## 6. Domain constraints that apply (from CLAUDE.md)
-<e.g. money as integer minor units, idempotency keys, audit logging.>
+## 6. Project constraints that apply (from conventions.md)
+<Relevant domain-specific correctness rules and conventions this feature must
+respect.>

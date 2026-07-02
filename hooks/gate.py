@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse approval gate for the finance-workflow plugin.
+"""PreToolUse approval gate for the dev-workflow plugin.
 
 Blocks Edit/Write/MultiEdit on SOURCE files while the project's `.approval-gate`
 file says LOCKED, so an unapproved phase can never advance. Working docs

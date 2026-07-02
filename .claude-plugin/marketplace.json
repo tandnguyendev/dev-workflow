@@ -1,11 +1,11 @@
 {
-  "name": "finance-workflow-marketplace",
-  "owner": { "name": "projecttoncorporation" },
+  "name": "dev-workflow-marketplace",
+  "owner": { "name": "tandnguyendev" },
   "plugins": [
     {
-      "name": "finance-workflow",
+      "name": "dev-workflow",
       "source": "./",
-      "description": "Spec-driven finance feature workflow: research, options, phased build with reviews, final audit."
+      "description": "General spec-driven dev workflow: detect domain, research, options, phased build with reviews, final audit."
     }
   ]
 }
