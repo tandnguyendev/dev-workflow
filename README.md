@@ -2,13 +2,24 @@
 
 **A spec-driven development workflow for Claude Code — domain-agnostic, review-gated, safe by default.**
 
-Every feature runs through a disciplined pipeline that stops for your approval at each step:
+Every feature runs the same disciplined gauntlet — and *you* are the final boss at every gate:
 
+```mermaid
+flowchart TD
+    C[detect conventions] --> R[research] --> O[3+ solution options] --> P[phased plan]
+    P --> B[build one phase]
+    B --> V{{"AI review — code + security"}}
+    V --> Y["you approve, AFTER the AI"]
+    Y -->|next phase| B
+    Y -->|all phases done| A[final cross-phase audit]
+    A --> S([ship it])
+
+    style Y fill:#ffe08a,stroke:#d98f00,color:#000
+    style V fill:#e6e0ff,stroke:#6b4fd8,color:#000
+    style S fill:#c8f7c5,stroke:#2fae4f,color:#000
 ```
-detect conventions → research → 3+ options → phased plan → build → final audit
-                                            each phase: code review + security scan
-                  ↑  you approve AFTER the AI at every checkpoint  ↑
-```
+
+> Pair programming, except your pair is six robots who *actually read the spec* — and you still hold the almighty **“nope.”**
 
 The domain isn't hardcoded — it's read from your `conventions.md` (via `/dev-workflow:init`) or inferred per feature from the code.
 
