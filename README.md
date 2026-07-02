@@ -16,15 +16,22 @@ feature description and the surrounding code.
 | `/dev-workflow:init` | skill | session model | Inspect the project, draft `conventions.md` |
 | `/dev-workflow:feature` | skill (orchestrator) | session model | Drive the whole feature workflow |
 | `/dev-workflow:status` | command | session model | On-demand readout of the active feature/phase/gate |
-| `domain-researcher` | agent | inherit | Read-only + web research of domain/stack best practices |
-| `solution-architect` | agent | inherit | Produce one solution option from an assigned angle (panel) |
+| `domain-researcher` | agent | Haiku 4.5 | Read-only + web research of domain/stack best practices |
+| `solution-architect` | agent | Haiku 4.5 | Produce one solution option from an assigned angle (panel) |
 | `coder` | agent | Opus 4.8 | Implement one planned phase |
 | `code-reviewer` | agent | inherit | Logic/quality review, read-only |
 | `security-scan-fast` | agent | Fable 5 | Fast per-phase security scan |
 | `security-audit` | agent | Opus 4.8 | Deep final cross-phase security audit |
 
-Model routing is a sensible default (fast/cheap per-phase scan, thorough audit at
-the end, Opus for coding). Edit the `model:` field in any `agents/*.md` to change.
+Model routing is a sensible default: cheap models for research/option-sketching
+(Haiku) and per-phase security scan (Fable), Opus reserved for coding and the
+final audit. Edit the `model:` field in any `agents/*.md` to change.
+
+**Token efficiency.** The `feature` skill triages each feature (trivial /
+standard / complex) and scales the machinery: trivial work skips research and the
+option panel and uses a single reviewer; standard uses a 2-agent panel; only
+complex work runs the full 3-agent panel + both reviewers every phase + a full
+final audit. The final review is cross-phase focused, not a full re-review.
 
 ## Install
 

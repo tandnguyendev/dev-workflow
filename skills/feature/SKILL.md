@@ -31,23 +31,38 @@ the user. Coding is delegated to the `coder` subagent.
 4. Multiple features can coexist under `.dev-workflow/features/`; switch the
    active one by updating `.dev-workflow/active`.
 
+## Triage — size the workflow to the feature
+Before Stage 1, classify the feature and scale the machinery to save tokens on
+small work. Tell the user the tier you picked; they can override it.
+- **trivial** (tiny, localized, low-risk — e.g. a copy tweak, one field, a small
+  fix): SKIP Stage 1 research and the Stage 2 panel — propose the approach inline.
+  Use ONE reviewer per phase (`code-reviewer`; add `security-scan-fast` only if
+  the change touches security-sensitive code). Usually a single phase; if so, the
+  per-phase review IS the final review — skip Stage 5.
+- **standard** (a normal feature, a few phases): full loop, but a 2-agent option
+  panel instead of 3.
+- **complex** (architectural, security-sensitive, or wide blast radius): full
+  machinery — 3-agent panel, both reviewers each phase, full final audit.
+When unsure, pick the lighter tier and let the user bump it up.
+
 ## Stage 0 — Establish domain/conventions
 - If `conventions.md` exists, read it — that is the domain + engineering context.
 - If it does NOT exist, tell the user they can run `/dev-workflow:init` first for
   richer context; otherwise proceed, and rely on `domain-researcher` inferring
   the domain from the feature description and the code.
 
-## Stage 1 — Research
+## Stage 1 — Research  (skip for trivial)
 1. Spawn the `domain-researcher` subagent with the feature description.
 2. Write its summary into `spec.md` section 2.
 3. Present a short summary to the user. **CHECKPOINT: stop, ask if the research
    direction looks right before proposing solutions.**
 
 ## Stage 2 — Solution options (independent panel)
-1. Spawn ~3 `solution-architect` subagents IN PARALLEL, each with a DIFFERENT
-   assigned angle (simplicity-first, performance-first, risk-first), passing the
-   feature description and the research summary. Independent context per agent
-   reduces single-thread bias.
+1. Spawn a `solution-architect` panel IN PARALLEL sized by tier — 3 agents for
+   complex, 2 for standard, and SKIP the panel for trivial (propose inline).
+   Give each a DIFFERENT angle (simplicity-first, performance-first, risk-first),
+   passing the feature description and the research summary. Independent context
+   per agent reduces single-thread bias.
 2. Synthesize their returned options into `spec.md` section 3 as a comparison
    table (complexity / performance / security risk / effort). Merge near-
    duplicates but keep at least 3 distinct options.
@@ -69,6 +84,8 @@ For each phase in `plan.md`, in order:
 2. When it returns, run the reviews IN PARALLEL:
    - `code-reviewer` (logic/quality)
    - `security-scan-fast` (fast security pass)
+   For a **trivial** feature, run only `code-reviewer` — add `security-scan-fast`
+   only if the change touches security-sensitive code.
 3. Summarize both reviews for the user. Update `phase-log.md`.
    - If reviewers found issues, have `coder` fix them, then re-review.
 4. **CHECKPOINT: the user reviews AFTER the AI. Stop and wait for approval.**
@@ -80,10 +97,13 @@ For each phase in `plan.md`, in order:
    `Phase N: <title>`). Skip if not a git repo or the user prefers one final
    commit. This keeps the final-audit diff clean and ties phases to history.
 
-## Stage 5 — Final review (whole feature)
-1. Run over the FULL diff of all phases (not just the last):
-   - `code-reviewer` on the full diff.
-   - `security-audit` (deep pass) for cross-phase interaction bugs.
+## Stage 5 — Final review (whole feature)  (skip if trivial + single-phase)
+1. Run over the full feature (all phases together):
+   - `code-reviewer` focused on CROSS-PHASE issues only — inconsistencies and
+     interactions between phases, integration seams, and anything a per-phase
+     review could not see. Do NOT re-review each file from scratch; that was
+     already done per phase.
+   - `security-audit` (deep pass) for cross-phase interaction vulnerabilities.
 2. Summarize findings, update `phase-log.md` final section.
 3. If issues found, fix via `coder` and re-audit.
 4. **CHECKPOINT: present the final result and stop for the user's sign-off.**

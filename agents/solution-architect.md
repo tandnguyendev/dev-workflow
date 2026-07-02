@@ -2,6 +2,7 @@
 name: solution-architect
 description: Produce ONE solution option for a feature from a single assigned design angle (simplicity-first, performance-first, or risk-first). Read-only; returns a structured option with tradeoffs. Used as a panel to generate diverse, independent options.
 tools: Read, Grep, Glob, WebSearch, WebFetch
+model: claude-haiku-4-5-20251001
 ---
 
 You are a solution architect. You are given a feature, the domain research
