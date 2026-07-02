@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checkpoint engine for the dev-workflow plugin (Phase 1: snapshot + list).
+"""Checkpoint engine for the dev-workflow plugin.
 
 As a PreToolUse hook (no args, JSON on stdin): before a mutating tool
 (Edit/Write/MultiEdit/Bash) runs, snapshot the working tree to an immutable
@@ -7,18 +7,22 @@ commit on a shadow ref `refs/dev-workflow/checkpoints/<ts>` WITHOUT touching the
 user's index, HEAD, branch, or working tree. Always exits 0 and never denies —
 it is a side-effecting recorder, not a gate. Fails open on any error.
 
-As a CLI: `checkpoint.py snapshot|list` (rollback/undo arrive in Phase 2).
+As a CLI: `checkpoint.py snapshot | list | rollback [ref] | undo`.
 
-Mechanism (never mutates the user's real index):
+Snapshot mechanism (never mutates the user's real index):
   GIT_INDEX_FILE=<tmp> git read-tree HEAD      # seed tmp index from HEAD
   GIT_INDEX_FILE=<tmp> git add -A              # stage working tree into tmp index
   tree=$(GIT_INDEX_FILE=<tmp> git write-tree)
   commit=$(git commit-tree $tree -p HEAD -m <json>)
   git update-ref refs/dev-workflow/checkpoints/<ts> $commit
 
+Rollback restores the working tree to a checkpoint's tree WITHOUT moving the
+branch, after first capturing the current state as a `pre-rollback` checkpoint so
+the rollback itself is reversible (`undo`). Nothing is ever hard-deleted from git.
+
 Safety: operates only inside CLAUDE_PROJECT_DIR (never an arbitrary cwd); git is
 run with a timeout, non-interactive, and fsmonitor disabled. v1 scope: git repos
-only (silent no-op otherwise); no retention yet.
+only (silent no-op otherwise); no retention/pruning yet.
 """
 import json
 import os
@@ -81,8 +85,8 @@ def last_snapshot(project_dir):
     return ref, tree
 
 
-def snapshot(project_dir, tool_name=""):
-    """Create a snapshot ref if the tree changed. Returns the ref or None."""
+def snapshot(project_dir, tool_name="", force=False):
+    """Create a snapshot ref if the tree changed (or force). Returns ref or None."""
     if not is_git_repo(project_dir):
         return None
 
@@ -101,9 +105,10 @@ def snapshot(project_dir, tool_name=""):
         shutil.rmtree(tmpdir, ignore_errors=True)
 
     # Dedup: skip if the working tree is identical to the newest snapshot.
-    _, prev_tree = last_snapshot(project_dir)
-    if prev_tree == tree:
-        return None
+    if not force:
+        _, prev_tree = last_snapshot(project_dir)
+        if prev_tree == tree:
+            return None
 
     meta = json.dumps({"timestamp": _now(), "tool": tool_name, "head_before": head},
                       separators=(",", ":"))
@@ -137,14 +142,64 @@ def list_snapshots(project_dir):
     return rows
 
 
+def _resolve_target(project_dir, ref):
+    """Resolve a checkpoint arg to a commit, or default to the most recent
+    non-`pre-rollback` checkpoint. Only refs under REF_PREFIX are accepted — a
+    bare `HEAD`/`main`/tag/SHA is rejected so rollback can only target checkpoints."""
+    if ref:
+        stamp = ref.rsplit("/", 1)[-1]  # accept full ref, short ref, or bare stamp
+        full = f"{REF_PREFIX}/{stamp}"
+        rc, out = git(project_dir, ["rev-parse", "--verify", "-q", full + "^{commit}"], check=False)
+        if rc == 0 and out:
+            return out
+        raise RuntimeError(f"unknown checkpoint: {ref}")
+    for r in list_snapshots(project_dir):
+        if r.get("tool") != "pre-rollback":
+            _, c = git(project_dir, ["rev-parse", r["ref"]])
+            return c
+    raise RuntimeError("no checkpoints to roll back to")
+
+
+def restore_tree(project_dir, commit):
+    """Set the working tree (and index) to `commit`'s tree WITHOUT moving the
+    branch; then reset the index back to HEAD so the delta shows as unstaged.
+    Untracked files created since the checkpoint are left in place (never
+    deleted)."""
+    git(project_dir, ["read-tree", "-u", "--reset", commit])
+    if head_sha(project_dir):
+        git(project_dir, ["reset", "-q", "HEAD"])
+
+
+def rollback(project_dir, ref=None):
+    """Restore to a checkpoint, first saving current state as a reversible
+    `pre-rollback` checkpoint."""
+    if not is_git_repo(project_dir):
+        raise RuntimeError("not a git repository")
+    target = _resolve_target(project_dir, ref)
+    undo_ref = snapshot(project_dir, "pre-rollback", force=True)
+    restore_tree(project_dir, target)
+    return {"target": target, "undo_ref": undo_ref}
+
+
+def undo(project_dir):
+    """Reverse the most recent rollback by restoring its `pre-rollback` snapshot."""
+    for r in list_snapshots(project_dir):
+        if r.get("tool") == "pre-rollback":
+            return rollback(project_dir, r["ref"])
+    raise RuntimeError("nothing to undo")
+
+
 def _now():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
 def _ref_stamp():
-    # Sortable timestamp + random suffix so concurrent snapshots never collide
-    # (a collision would silently overwrite an earlier snapshot).
-    return time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()) + "-" + os.urandom(4).hex()
+    # Nanosecond precision so lexicographic refname order == creation order
+    # (needed for "reverse the LAST rollback"); random suffix breaks any tie and
+    # prevents a collision silently overwriting an earlier snapshot.
+    ns = time.time_ns()
+    return (time.strftime("%Y%m%dT%H%M%S", time.gmtime())
+            + f".{ns % 1_000_000_000:09d}-" + os.urandom(3).hex())
 
 
 def resolve_project_dir(payload=None):
@@ -191,9 +246,22 @@ def cli_main(argv):
             if not rows:
                 print("(no checkpoints)")
             for r in rows:
-                print(f"{r['ref']}\t{r.get('timestamp','?')}\t{r.get('tool','?')}")
+                tag = "  <- pre-rollback" if r.get("tool") == "pre-rollback" else ""
+                print(f"{r['ref']}\t{r.get('timestamp','?')}\t{r.get('tool','?')}{tag}")
+        elif cmd == "rollback":
+            ref = argv[1] if len(argv) > 1 else None
+            res = rollback(project_dir, ref)
+            print(f"Rolled back the working tree to checkpoint {res['target'][:12]}.")
+            if res["undo_ref"]:
+                print(f"Prior state saved as {res['undo_ref'].split('/')[-1]} "
+                      f"- run `undo` (or rollback to it) to reverse this.")
+            print("Files created since that checkpoint are left in place "
+                  "(see `git status`).")
+        elif cmd == "undo":
+            undo(project_dir)
+            print("Reversed the last rollback.")
         else:
-            print(f"unknown or not-yet-implemented command: {cmd}", file=sys.stderr)
+            print(f"unknown command: {cmd}", file=sys.stderr)
             sys.exit(2)
     except Exception as e:
         print(f"checkpoint: {e}", file=sys.stderr)  # fail gracefully
