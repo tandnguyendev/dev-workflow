@@ -16,6 +16,8 @@ feature description and the surrounding code.
 | `/dev-workflow:init` | skill | session model | Inspect the project, draft `conventions.md` |
 | `/dev-workflow:feature` | skill (orchestrator) | session model | Drive the whole feature workflow |
 | `/dev-workflow:status` | command | session model | On-demand readout of the active feature/phase/gate |
+| `/dev-workflow:checkpoints` | skill | session model | List auto-snapshots taken before agent edits |
+| `/dev-workflow:rollback` | skill | session model | Restore the working tree to a checkpoint (safe, reversible) |
 | `domain-researcher` | agent | Haiku 4.5 | Read-only + web research of domain/stack best practices |
 | `solution-architect` | agent | Haiku 4.5 | Produce one solution option from an assigned angle (panel) |
 | `coder` | agent | Opus 4.8 | Implement one planned phase |
@@ -90,9 +92,12 @@ file at your project root says `LOCKED`.
 
 - Opt-in: does nothing until you create `.approval-gate`.
 - Working docs (`spec.md`, `plan.md`, `phase-log.md`) stay editable while locked.
-- **Only you can unlock**, from your own shell — Claude cannot, because any
-  attempt to modify the gate file is blocked whether it comes through the edit
-  tools *or* Bash (redirection, `tee`, `mv`, `sed -i`, `Set-Content`, ...):
+- **Only you can unlock**, from your own shell — Claude cannot. Editing the gate
+  via `Edit`/`Write`/`MultiEdit` is blocked, and via Bash it is **deny-by-default**:
+  any command that so much as references `.approval-gate` is refused (a denylist of
+  write constructs can't cover every way to write a file — `python -c`, here-docs,
+  `install`, ...). A rollback also cannot flip the gate — the live gate state is
+  preserved across `/dev-workflow:rollback` and is never captured into a checkpoint.
 
 ```shell
 ! echo LOCKED > .approval-gate      # activate + lock
@@ -102,3 +107,32 @@ file at your project root says `LOCKED`.
 
 The `!` prefix runs the command in your shell, not as a Claude tool, so it is not
 intercepted by the hook. Requires Python on PATH (`python`/`python3`).
+
+## Checkpoint / rollback
+
+While you work in a git repo, a `PreToolUse` hook (`hooks/checkpoint.py`)
+automatically snapshots the working tree before each mutating tool call to an
+immutable shadow ref `refs/dev-workflow/checkpoints/<ts>`, using git plumbing on a
+temporary index — it never touches your index, HEAD, branch, or working tree, and
+never blocks or slows a tool call to a halt (it is fail-open with a timeout).
+
+- `/dev-workflow:checkpoints` — list the snapshots (newest first).
+- `/dev-workflow:rollback [ref]` — restore the working tree to a checkpoint
+  (default: the most recent). It first saves your current state as a reversible
+  `pre-rollback` checkpoint, so a subsequent `undo` reverses it; it never moves
+  your branch and never hard-deletes anything from git.
+
+**Safety.** Every restore is preceded by a durable snapshot, so uncommitted work
+is always recoverable. Rollback restores tracked file *content*; files you created
+since the checkpoint are left in place (they show in `git status`).
+
+**v1 limitations (deliberately small surface):**
+- Git repositories only — a silent no-op elsewhere.
+- No retention/pruning yet: snapshot refs accumulate under
+  `refs/dev-workflow/checkpoints/*`. They are local-only (not pushed by
+  `git push`); prune with
+  `git for-each-ref --format='delete %(refname)' refs/dev-workflow | git update-ref --stdin`.
+- Snapshots capture non-gitignored files, so keep secrets in `.gitignore` (git
+  respects it) — otherwise untracked secrets get recorded in the refs.
+- Requires `python` on PATH (Windows: ensure `python`, not only `py`).
+- Add `.dev-workflow/` to your project `.gitignore` (the feature workflow uses it).

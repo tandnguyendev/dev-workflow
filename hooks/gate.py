@@ -3,10 +3,13 @@
 
 Two protections:
 1. The model may NEVER modify `.approval-gate` itself — not via
-   Edit/Write/MultiEdit, and not via Bash (redirection, tee, mv, cp, sed -i,
-   Set-Content, ...). Only the user changes it from their own shell
-   (`! echo UNLOCKED > .approval-gate`), which is not a Claude tool call and is
-   therefore not intercepted. This makes the gate a real barrier.
+   Edit/Write/MultiEdit, and not via Bash. For Bash this is deny-by-default:
+   ANY command that references `.approval-gate` is blocked, because a denylist of
+   write constructs (`>`, tee, sed -i, ...) cannot enclose every way to write a
+   file (e.g. `python -c "open('.approval-gate','w')..."`). Only the user changes
+   it from their own shell (`! echo UNLOCKED > .approval-gate`), which is not a
+   Claude tool call and is therefore not intercepted. This makes the gate a real
+   barrier.
 2. While `.approval-gate` says LOCKED, block Edit/Write/MultiEdit on source
    files so an unapproved phase cannot advance. Workflow working docs stay
    editable so the log can be maintained: anything under `.dev-workflow/` plus
@@ -19,20 +22,12 @@ Gate states (first non-empty line of `.approval-gate`, case-insensitive):
 """
 import json
 import os
-import re
 import sys
 
 # Doc basenames that are always workflow docs, wherever they live.
 WORKING_DOC_NAMES = {"spec.md", "plan.md", "phase-log.md", "conventions.md"}
 STATE_DIR = ".dev-workflow"
 GATE_NAME = ".approval-gate"
-
-# Bash constructs that could write to / replace a file.
-_BASH_WRITE = re.compile(
-    r"(>>?|\btee\b|\bsed\b\s+-i|\bmv\b|\bcp\b|\btruncate\b|\bdd\b|"
-    r"Set-Content|Out-File|Add-Content)",
-    re.IGNORECASE,
-)
 
 GATE_EDIT_MSG = (
     "Only you can change the approval gate. Run it in YOUR shell so it is not a "
@@ -54,9 +49,11 @@ def deny(reason):
 
 
 def bash_touches_gate(command):
-    if GATE_NAME not in command:
-        return False
-    return bool(_BASH_WRITE.search(command))
+    # Deny-by-default: any Bash command that so much as references the gate file
+    # is blocked. A denylist of write constructs cannot cover every way to write
+    # a file (interpreters with -c/-e, here-docs, install, patch, ...), so we do
+    # not try — the model has no legitimate need to touch the gate via Bash.
+    return GATE_NAME in command
 
 
 def is_working_doc(fp, project_dir):

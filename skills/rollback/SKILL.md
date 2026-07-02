@@ -1,7 +1,7 @@
 ---
 name: rollback
 description: Undo an AI agent's changes by restoring the git working tree to a checkpoint. Safe and reversible — saves current state first, never moves your branch, never hard-deletes. Optionally pass a checkpoint ref; defaults to the most recent.
-allowed-tools: Bash(python "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" *)
+allowed-tools: Bash(python "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" list), Bash(python "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" undo)
 ---
 
 Restore the working tree to a checkpoint, undoing recent agent changes. This is
@@ -22,6 +22,9 @@ Steps:
    ```
    python "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" rollback [ref]
    ```
+   This step is intentionally NOT pre-approved — because a rollback rewrites the
+   working tree, Claude Code will ask the user to permit this exact command. That
+   confirmation is expected; wait for it.
 3. Relay the tool's output verbatim, including how to reverse it:
    ```
    python "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" undo
