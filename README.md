@@ -39,15 +39,18 @@ Update later: `/plugin marketplace update dev-workflow-marketplace`.
 
 ```shell
 # 1. (optional but recommended) let the workflow learn your project
-/dev-workflow:init
+/dev-workflow:init            # inspects the repo, drafts conventions.md
 
-# 2. copy the working-doc templates into your project root
-cp <cloned-repo>/templates/{spec,plan,phase-log}.md ./
-# (init writes conventions.md for you; otherwise copy templates/conventions.md too)
-
-# 3. run a feature
+# 2. run a feature — it scaffolds .dev-workflow/features/<slug>/{spec,plan,phase-log}.md
 /dev-workflow:feature add pagination to the orders list endpoint
+
+# 3. check where you are at any time (also injected automatically each session)
+/dev-workflow:status
 ```
+
+The workflow scaffolds its per-feature working docs automatically under
+`.dev-workflow/features/<slug>/`; you no longer copy templates by hand. Several
+features can be in flight at once — `.dev-workflow/active` names the current one.
 
 The orchestrator pauses for your approval at each stage. You review AFTER the AI
 reviewers at every phase; nothing advances unapproved.

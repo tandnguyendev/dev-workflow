@@ -39,6 +39,9 @@
 > domain? These are what the security reviewers prioritize.
 
 ## Workflow files (source of truth, survive /compact and /clear)
+Per-feature docs live under `.dev-workflow/features/<slug>/` (the active slug is
+in `.dev-workflow/active`); this file (`conventions.md`) is project-wide at the
+repo root.
 - `spec.md` — the idea, chosen solution, tradeoffs.
 - `plan.md` — phased plan, files to change.
 - `phase-log.md` — per-phase log + review results + approval status.

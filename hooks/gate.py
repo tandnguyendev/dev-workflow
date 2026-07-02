@@ -8,8 +8,9 @@ Two protections:
    (`! echo UNLOCKED > .approval-gate`), which is not a Claude tool call and is
    therefore not intercepted. This makes the gate a real barrier.
 2. While `.approval-gate` says LOCKED, block Edit/Write/MultiEdit on source
-   files so an unapproved phase cannot advance. Working docs
-   (spec.md / plan.md / phase-log.md) stay editable so the log can be maintained.
+   files so an unapproved phase cannot advance. Workflow working docs stay
+   editable so the log can be maintained: anything under `.dev-workflow/` plus
+   the doc basenames spec.md / plan.md / phase-log.md / conventions.md.
 
 Gate states (first non-empty line of `.approval-gate`, case-insensitive):
   LOCKED    -> block source edits
@@ -21,8 +22,9 @@ import os
 import re
 import sys
 
-# Docs (spec/plan/log) remain editable even when locked.
-ALWAYS_ALLOWED = {"spec.md", "plan.md", "phase-log.md"}
+# Doc basenames that are always workflow docs, wherever they live.
+WORKING_DOC_NAMES = {"spec.md", "plan.md", "phase-log.md", "conventions.md"}
+STATE_DIR = ".dev-workflow"
 GATE_NAME = ".approval-gate"
 
 # Bash constructs that could write to / replace a file.
@@ -52,17 +54,29 @@ def deny(reason):
 
 
 def bash_touches_gate(command):
-    """True if a shell command appears to write to the gate file."""
     if GATE_NAME not in command:
         return False
     return bool(_BASH_WRITE.search(command))
+
+
+def is_working_doc(fp, project_dir):
+    """True if the path is a workflow doc (safe to edit even when locked)."""
+    if not fp:
+        return False
+    if os.path.basename(fp) in WORKING_DOC_NAMES:
+        return True
+    try:
+        state = os.path.abspath(os.path.join(project_dir, STATE_DIR))
+        return os.path.commonpath([state, os.path.abspath(fp)]) == state
+    except Exception:
+        return False
 
 
 def main():
     try:
         payload = json.load(sys.stdin)
     except Exception:
-        sys.exit(0)  # can't parse -> fail open (don't wedge the session)
+        sys.exit(0)  # can't parse -> fail open
 
     tool = payload.get("tool_name", "")
     tool_input = payload.get("tool_input") or {}
@@ -96,9 +110,8 @@ def main():
     if state != "LOCKED":
         sys.exit(0)  # UNLOCKED or anything else -> allow
 
-    # Locked: still allow the working docs so the log can be updated.
-    fp = tool_input.get("file_path", "")
-    if fp and os.path.basename(fp) in ALWAYS_ALLOWED:
+    # Locked: still allow workflow docs so the log can be updated.
+    if is_working_doc(tool_input.get("file_path", ""), project_dir):
         sys.exit(0)
 
     deny(

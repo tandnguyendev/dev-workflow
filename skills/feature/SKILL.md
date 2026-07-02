@@ -10,13 +10,26 @@ review yourself — you delegate those to subagents and keep the conversation wi
 the user. Coding is delegated to the `coder` subagent.
 
 **Golden rules**
-- The source of truth is FILES (`conventions.md`, `spec.md`, `plan.md`,
-  `phase-log.md`), not this conversation. Write decisions to files as you go;
-  re-read them if unsure.
+- The source of truth is FILES, not this conversation: project-wide
+  `conventions.md` at the repo root, and per-feature `spec.md` / `plan.md` /
+  `phase-log.md` inside the active feature dir `.dev-workflow/features/<slug>/`.
+  Every mention of those three files below means the copy in the active feature
+  dir. Write decisions to files as you go; re-read them if unsure.
 - STOP at every checkpoint below and wait for the user. NEVER skip a checkpoint
   or proceed without explicit approval. An unapproved phase must never advance.
 - If the user gave the feature description as arguments, use it; otherwise ask
   for it first.
+
+## Setup — feature workspace
+1. Derive a short kebab-case `slug` from the feature description (e.g.
+   `wallet-topup`).
+2. Create `.dev-workflow/features/<slug>/` and scaffold `spec.md`, `plan.md`,
+   `phase-log.md` there — copy from the plugin's `templates/` if reachable,
+   otherwise create them with the standard sections.
+3. Record the active feature: write `<slug>` to `.dev-workflow/active`. The
+   SessionStart status hook and `/dev-workflow:status` read this.
+4. Multiple features can coexist under `.dev-workflow/features/`; switch the
+   active one by updating `.dev-workflow/active`.
 
 ## Stage 0 — Establish domain/conventions
 - If `conventions.md` exists, read it — that is the domain + engineering context.

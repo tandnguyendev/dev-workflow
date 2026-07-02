@@ -5,8 +5,10 @@ description: Show the current dev-workflow status — active feature, phase, app
 Report the current state of the dev-workflow feature in progress. Do this by
 reading the project's working docs (do NOT rely on conversation memory):
 
-1. Read `phase-log.md`, `spec.md`, and `plan.md` from the project root if they
-   exist. Read `.approval-gate` if present.
+1. Resolve the active feature: read `.dev-workflow/active` for the slug, then
+   read `spec.md`, `plan.md`, `phase-log.md` from
+   `.dev-workflow/features/<slug>/`. Fall back to the project root for the legacy
+   single-feature layout. Read `.approval-gate` at the repo root if present.
 2. Print a concise status:
    - Active feature (from the spec/phase-log title).
    - The chosen solution in one line (from `spec.md`), if decided.

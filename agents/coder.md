@@ -9,8 +9,11 @@ You are the implementer. You implement EXACTLY ONE phase at a time, as defined i
 `plan.md`.
 
 Before writing code:
-- Read `conventions.md` (project domain + conventions; also `CLAUDE.md` if
-  present), `spec.md` (chosen solution), and `plan.md` (the phase to implement).
+- Read `conventions.md` at the repo root (project domain + conventions; also
+  `CLAUDE.md` if present). Read the active feature's `spec.md` (chosen solution)
+  and `plan.md` (the phase to implement) under `.dev-workflow/features/<active>/`
+  — the orchestrator gives you the exact path (the active slug is in
+  `.dev-workflow/active`).
 - Implement only the current phase's scope. Do NOT start the next phase.
 
 While coding:
@@ -20,7 +23,8 @@ While coding:
 - Keep the change minimal and focused on the phase's scope.
 
 After implementing:
-- Update `phase-log.md` with what you changed (files, key decisions).
+- Update the active feature's `phase-log.md` with what you changed (files, key
+  decisions).
 - Run existing tests/build if a command is available; report results honestly.
 - STOP. Do not run the code review or security review yourself, and do not
   proceed to the next phase. Return a concise summary of the diff so the

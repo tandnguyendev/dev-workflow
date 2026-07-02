@@ -36,6 +36,18 @@ def read(path):
         return None
 
 
+def docs_dir(root):
+    """Resolve the active feature's doc dir. Falls back to the project root for
+    the legacy single-feature layout. Returns (dir, slug_or_None)."""
+    active = read(os.path.join(root, ".dev-workflow", "active"))
+    if active:
+        slug = next((l.strip() for l in active.splitlines() if l.strip()), "")
+        d = os.path.join(root, ".dev-workflow", "features", slug)
+        if slug and os.path.isdir(d):
+            return d, slug
+    return root, None
+
+
 def title_from(text, prefix):
     if not text:
         return None
@@ -48,13 +60,14 @@ def title_from(text, prefix):
 
 def main():
     root = project_dir()
-    log = read(os.path.join(root, "phase-log.md"))
+    ddir, slug = docs_dir(root)
+    log = read(os.path.join(ddir, "phase-log.md"))
     if not log:
         sys.exit(0)  # no active workflow -> stay silent
 
     feature = (title_from(log, "Phase log:")
-               or title_from(read(os.path.join(root, "spec.md")) or "", "Spec:")
-               or "(unnamed)")
+               or title_from(read(os.path.join(ddir, "spec.md")) or "", "Spec:")
+               or slug or "(unnamed)")
 
     # Phase headings and their approval state.
     phases = []
