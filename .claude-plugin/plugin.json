@@ -1,0 +1,9 @@
+{
+  "name": "finance-workflow",
+  "description": "Spec-driven feature workflow for finance/fintech projects: research, solution options, phased implementation with per-phase code + security reviews, and a final cross-phase audit. Bundles orchestrator skill and specialized subagents.",
+  "version": "0.1.0",
+  "author": { "name": "projecttoncorporation" },
+  "homepage": "https://github.com/tandnguyendev/claude-finance-workflow",
+  "repository": "https://github.com/tandnguyendev/claude-finance-workflow",
+  "license": "MIT"
+}

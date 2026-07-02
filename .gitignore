@@ -1,0 +1,6 @@
+# Keep working docs OUT of the plugin repo — they belong in the consuming
+# project. Leading slash anchors to repo root so templates/*.md are still shipped.
+/spec.md
+/plan.md
+/phase-log.md
+/CLAUDE.md
