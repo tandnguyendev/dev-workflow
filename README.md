@@ -54,16 +54,16 @@ Working docs scaffold automatically under `.dev-workflow/features/<slug>/`; mult
 | `/dev-workflow:checkpoints` | List auto-snapshots |
 | `/dev-workflow:rollback` | Restore to a checkpoint (safe, reversible) |
 
-**Subagents** — model routing is a sensible default (cheap models scout; Opus codes & audits). Change it in any `agents/*.md`.
+**Subagents** — model routing is tiered to save tokens: cheap models scout and review, Opus is reserved for writing code. Change it in any `agents/*.md`.
 
 | Agent | Model | Role |
 |-------|-------|------|
 | `domain-researcher` | Haiku 4.5 | Domain/stack research (read-only + web) |
 | `solution-architect` | Haiku 4.5 | One solution option per angle (panel) |
 | `coder` | Opus 4.8 | Implement one phase |
-| `code-reviewer` | inherit | Logic/quality review |
+| `code-reviewer` | Sonnet 5 | Logic/quality review |
 | `security-scan-fast` | Fable 5 | Fast per-phase security scan |
-| `security-audit` | Opus 4.8 | Deep final cross-phase audit |
+| `security-audit` | Sonnet 5 | Deep final cross-phase audit |
 
 ## Safety & reliability
 
