@@ -31,12 +31,15 @@ Before Stage 1, classify the feature to scale the machinery and save tokens.
 Default to the LIGHTER tier when unsure; tell the user the tier and let them bump
 it up.
 - **trivial** (tiny, localized, low-risk): SKIP Stage 1 and the Stage 2 panel —
-  propose inline. One reviewer per phase (`code-reviewer`; add
-  `security-scan-fast` only if security-sensitive). Usually single-phase — if so,
-  skip Stage 5 (the per-phase review is the final one).
+  propose inline. Usually single-phase — if so, skip Stage 5 (the per-phase review
+  is the final one).
 - **standard** (normal feature, a few phases): full loop, 2-agent option panel.
 - **complex** (architectural, security-sensitive, wide blast radius): full
-  machinery — 3-agent panel, both reviewers per phase, full final audit.
+  machinery — 3-agent panel, full final audit.
+The tier scales research and option-panel depth — NOT security coverage:
+`code-reviewer` runs every phase in every tier, and `security-scan-fast` runs
+whenever a phase touches a security-sensitive surface (see Stage 4), trivial or
+complex alike.
 
 ## Stage 0 — Establish domain/conventions
 Read `conventions.md` if it exists (domain + engineering context). If not, tell
@@ -64,16 +67,31 @@ and let `domain-researcher` infer the domain from the description + code.
 ## Stage 3 — Plan
 1. Enter Plan Mode (ask the user to press Shift+Tab twice, or hold a read-only
    planning stance — Plan Mode is behavioral, not a hard write-lock).
-2. Map the files to change; split the work into phases. Write `plan.md`.
-   **Right-size phases — each one costs a full loop (coder + reviewers +
-   checkpoint + a user approval round-trip), so don't over-split.** A phase is a
-   coherent, independently-reviewable, independently-approvable unit of behavior —
-   not the smallest possible edit. Merge steps that a reviewer would check in one
-   pass, that touch the same files, or that only make sense together. Aim for the
-   FEWEST phases that keep each reviewable in one sitting: typically 2–5 for
-   standard, 1 for trivial, more only when the blast radius genuinely warrants it.
-   A phase per file, or a phase for a change reviewable in seconds, is too small.
-3. **CHECKPOINT: present the plan, stop, get approval or edits before any code.**
+2. Map the files to change; split the work into phases. Write `plan.md`, following
+   these rules:
+   - **Right-size phases — each costs a full loop** (coder + reviewers + checkpoint
+     + a user approval round-trip), so don't over-split. A phase is a coherent,
+     independently-reviewable, independently-approvable unit of behavior — not the
+     smallest possible edit. Merge steps a reviewer would check in one pass, that
+     touch the same files, or that only make sense together. Aim for the FEWEST
+     reviewable phases: typically 2–5 for standard, 1 for trivial, more only when
+     the blast radius genuinely warrants it. A phase per file, or one reviewable in
+     seconds, is too small; a phase too big to review in one sitting is too big —
+     split it.
+   - **Order by dependency, then risk.** No phase depends on something a later
+     phase builds; among independent phases, schedule the risky or uncertain ones
+     EARLY so the plan fails fast, not late.
+   - **Each phase independently testable.** Name how it will be proven — the
+     test/command/output that becomes its `- Evidence:` ledger in Stage 4. A phase
+     with no way to verify it is a planning bug.
+   - **Each phase has a rollback point.** Note where the checkpoint sits so a bad
+     phase can be reverted cleanly (ties into the checkpoint/rollback machinery).
+3. **Adversarial plan review** (standard + complex tiers; SKIP for trivial): spawn
+   the `plan-reviewer` subagent on the drafted `plan.md`. It hunts for missing
+   phases, hidden dependencies, oversized/untestable phases, ordering mistakes, and
+   rollback gaps. Fold its findings into `plan.md` (resequence, split, or add
+   phases) before showing the user — note what changed.
+4. **CHECKPOINT: present the plan, stop, get approval or edits before any code.**
 
 ## Stage 4 — Phased implementation (loop per phase)
 For each phase in `plan.md`, in order:
@@ -83,11 +101,18 @@ For each phase in `plan.md`, in order:
    coder doesn't re-read the whole spec/plan. Same for reviewers: hand them the
    changed files/diff directly.
 2. When it returns, run the reviews IN PARALLEL:
-   - `code-reviewer` (logic/quality)
-   - `security-scan-fast` (fast security pass)
-   For a **trivial** feature, run only `code-reviewer` — add `security-scan-fast`
-   only if the change touches security-sensitive code.
-3. Summarize both reviews. Update `phase-log.md`.
+   - `code-reviewer` (logic/quality) — ALWAYS, every phase, every tier.
+   - `security-scan-fast` (fast security pass) — ONLY when this phase touches a
+     security-sensitive surface: auth/authz, input handling/parsing, crypto or
+     secrets, data access (queries, serialization/deserialization), or external
+     I/O (network, filesystem, subprocess). Gated by the phase's SURFACE, not the
+     tier — a copy tweak or rename in a complex feature needs no scan; a new
+     endpoint in a trivial one does. When unsure, run it.
+   Rationale: the per-phase scan catches LOCAL, compounding bugs early (injection,
+   hardcoded secrets, missing authz on a new endpoint) when they are cheap to fix.
+   EMERGENT, cross-phase vulnerabilities are the Stage 5 `security-audit`'s job, so
+   skipping the scan on non-sensitive phases loses nothing there.
+3. Summarize the review(s) that ran for the user. Update `phase-log.md`.
    - If reviewers found issues, have `coder` fix them, then re-review.
    - **Fill the phase's `- Evidence:` ledger** with CITED proof it works:
      test/command output, `file:line` refs, concrete cases verified — one artifact
@@ -103,7 +128,11 @@ For each phase in `plan.md`, in order:
    - `code-reviewer` on CROSS-PHASE issues ONLY — inconsistencies, phase
      interactions, integration seams. Do NOT re-review files from scratch (done
      per phase).
-   - `security-audit` (deep pass) for cross-phase interaction vulnerabilities.
+   - `security-audit` (deep pass) — owns EMERGENT, cross-phase interaction
+     vulnerabilities (auth flows spanning phases, data-flow and trust-boundary
+     analysis). It must ALSO give a full pass to any security-sensitive surface
+     whose per-phase `security-scan-fast` was gated out in Stage 4, so nothing
+     ships unscanned. Do NOT re-review clean, non-sensitive phases from scratch.
 2. Summarize findings; update `phase-log.md` final section and its `- Evidence:`
    line with feature-level proof (test-suite result, validation output, key
    end-to-end invariants checked).
