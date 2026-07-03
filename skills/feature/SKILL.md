@@ -75,7 +75,23 @@ When unsure, pick the lighter tier and let the user bump it up.
 1. Enter Plan Mode (ask the user to press Shift+Tab twice, or reason in a
    read-only planning stance — Plan Mode is behavioral, not a hard write-lock).
 2. Map the files to change and break the work into small phases. Write `plan.md`.
-3. **CHECKPOINT: present the plan, stop, and get the user to approve or edit it
+   Follow these planning rules:
+   - **One reviewable diff per phase.** If a phase is too big to review in one
+     sitting or bundles unrelated changes, split it.
+   - **Order by dependency, then by risk.** A phase must not depend on something a
+     later phase builds. Among independent phases, schedule the risky or uncertain
+     ones EARLY so the plan fails fast, not late.
+   - **Each phase independently testable.** Every phase names how it will be
+     proven to work — the test/command/output that becomes its `- Evidence:`
+     ledger in Stage 4. A phase with no way to verify it is a planning bug.
+   - **Each phase has a rollback point.** Note where the checkpoint sits so a bad
+     phase can be reverted cleanly (ties into the checkpoint/rollback machinery).
+3. **Adversarial plan review** (standard + complex tiers; SKIP for trivial):
+   spawn the `plan-reviewer` subagent on the drafted `plan.md`. It hunts for
+   missing phases, hidden dependencies, oversized/untestable phases, ordering
+   mistakes, and rollback gaps. Fold its findings into `plan.md` (resequence,
+   split, or add phases) before showing the user — note what changed.
+4. **CHECKPOINT: present the plan, stop, and get the user to approve or edit it
    before any code is written.**
 
 ## Stage 4 — Phased implementation (loop per phase)

@@ -60,6 +60,7 @@ Working docs scaffold automatically under `.dev-workflow/features/<slug>/`; mult
 |-------|-------|------|
 | `domain-researcher` | Haiku 4.5 | Domain/stack research (read-only + web) |
 | `solution-architect` | Haiku 4.5 | One solution option per angle (panel) |
+| `plan-reviewer` | inherit | Adversarial plan review before coding |
 | `coder` | Opus 4.8 | Implement one phase |
 | `code-reviewer` | inherit | Logic/quality review |
 | `security-scan-fast` | Fable 5 | Fast per-phase security scan |
