@@ -36,13 +36,16 @@ Before Stage 1, classify the feature and scale the machinery to save tokens on
 small work. Tell the user the tier you picked; they can override it.
 - **trivial** (tiny, localized, low-risk — e.g. a copy tweak, one field, a small
   fix): SKIP Stage 1 research and the Stage 2 panel — propose the approach inline.
-  Use ONE reviewer per phase (`code-reviewer`; add `security-scan-fast` only if
-  the change touches security-sensitive code). Usually a single phase; if so, the
-  per-phase review IS the final review — skip Stage 5.
+  Usually a single phase; if so, the per-phase review IS the final review — skip
+  Stage 5.
 - **standard** (a normal feature, a few phases): full loop, but a 2-agent option
   panel instead of 3.
 - **complex** (architectural, security-sensitive, or wide blast radius): full
-  machinery — 3-agent panel, both reviewers each phase, full final audit.
+  machinery — 3-agent panel, full final audit.
+The tier scales research and option-panel depth. It does NOT decide security
+coverage: `code-reviewer` runs every phase in every tier, and `security-scan-fast`
+runs whenever a phase touches a security-sensitive surface (see Stage 4) — trivial
+or complex alike.
 When unsure, pick the lighter tier and let the user bump it up.
 
 ## Stage 0 — Establish domain/conventions
@@ -98,11 +101,19 @@ When unsure, pick the lighter tier and let the user bump it up.
 For each phase in `plan.md`, in order:
 1. Delegate implementation of THIS phase only to the `coder` subagent.
 2. When it returns, run the reviews IN PARALLEL:
-   - `code-reviewer` (logic/quality)
-   - `security-scan-fast` (fast security pass)
-   For a **trivial** feature, run only `code-reviewer` — add `security-scan-fast`
-   only if the change touches security-sensitive code.
-3. Summarize both reviews for the user. Update `phase-log.md`.
+   - `code-reviewer` (logic/quality) — ALWAYS, every phase, every tier.
+   - `security-scan-fast` (fast security pass) — ONLY when this phase touches a
+     security-sensitive surface: auth/authz, input handling/parsing, crypto or
+     secrets, data access (queries, serialization/deserialization), or external
+     I/O (network, filesystem, subprocess). This gate is by the phase's SURFACE,
+     not the tier — a copy tweak or rename in a complex feature does not need a
+     scan; a new endpoint in a trivial one does. When unsure, run it.
+   Rationale: the per-phase scan catches LOCAL, compounding bugs early (injection,
+   hardcoded secrets, missing authz on a new endpoint) when they are cheap to fix.
+   EMERGENT, cross-phase vulnerabilities are NOT this scan's job — the Stage 5
+   `security-audit` owns those, so skipping the scan on non-sensitive phases loses
+   nothing there.
+3. Summarize the review(s) that ran for the user. Update `phase-log.md`.
    - If reviewers found issues, have `coder` fix them, then re-review.
    - **Fill the phase's `- Evidence:` ledger** with CITED proof that the phase
      works: test/command output, `file:line` references, the concrete cases
@@ -124,7 +135,11 @@ For each phase in `plan.md`, in order:
      interactions between phases, integration seams, and anything a per-phase
      review could not see. Do NOT re-review each file from scratch; that was
      already done per phase.
-   - `security-audit` (deep pass) for cross-phase interaction vulnerabilities.
+   - `security-audit` (deep pass) — owns EMERGENT, cross-phase interaction
+     vulnerabilities (auth flows spanning phases, data-flow and trust-boundary
+     analysis). It must ALSO give a full pass to any security-sensitive surface
+     whose per-phase `security-scan-fast` was gated out in Stage 4, so nothing
+     ships unscanned. Do NOT re-review clean, non-sensitive phases from scratch.
 2. Summarize findings, update `phase-log.md` final section, and fill its
    `- Evidence:` line with feature-level proof (test-suite result, the validation
    command output, the key end-to-end invariants checked).
