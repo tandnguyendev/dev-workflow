@@ -1,5 +1,10 @@
 # Project conventions
 
+*Keep this file lean — every research/coding/review subagent re-reads it in full,
+every phase, so each line is paid for many times over. Aim for under ~50 lines;
+push long detail into dedicated files (a `references/` doc, an ADR) that agents
+open only when a task needs them. (This note stays; the guidance blockquotes go.)*
+
 > This is the domain + engineering context for THIS project. It is the source of
 > truth the workflow reads before researching, coding, and reviewing.
 >
@@ -41,10 +46,7 @@
 > unsafe deserialization, SSRF), what are the high-value risks specific to this
 > domain? These are what the security reviewers prioritize.
 
-## Workflow files (source of truth, survive /compact and /clear)
-Per-feature docs live under `.dev-workflow/features/<slug>/` (the active slug is
-in `.dev-workflow/active`); this file (`conventions.md`) is project-wide at the
-repo root.
-- `spec.md` — the idea, chosen solution, tradeoffs.
-- `plan.md` — phased plan, files to change.
-- `phase-log.md` — per-phase log + review results + approval status.
+## Workflow files
+Per-feature `spec.md` / `plan.md` / `phase-log.md` live under
+`.dev-workflow/features/<slug>/` (active slug in `.dev-workflow/active`); this file
+is project-wide at the repo root. All survive `/compact` and `/clear`.

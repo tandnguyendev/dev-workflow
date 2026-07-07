@@ -94,13 +94,27 @@ and let `domain-researcher` infer the domain from the description + code.
 4. **CHECKPOINT: present the plan, stop, get approval or edits before any code.**
 
 ## Stage 4 — Phased implementation (loop per phase)
+**Reuse ONE coder across the phases — don't respawn each phase.** Spawn the `coder`
+for Phase 1; for every later phase, CONTINUE that same coder (via SendMessage)
+rather than a fresh Task. It keeps its warm context — the files it already opened,
+the conventions, and what earlier phases did — so you pay the codebase-intake cost
+ONCE instead of per phase. Respawn a fresh coder only when a phase moves to an
+unrelated subsystem (its warm context stops helping and just bloats its window) or
+after the user made large manual changes it hasn't seen — brief a reused coder on
+any such changes. Reviewers are the opposite: ALWAYS freshly spawned per phase —
+their value is objective fresh eyes on code they didn't write.
+
 For each phase in `plan.md`, in order:
-1. Delegate implementation of THIS phase only to the `coder` subagent. Pass the
-   phase's scope and the chosen approach INLINE (quote the relevant `plan.md`
-   block + the one-line solution from `spec.md`) plus the feature dir path, so the
-   coder doesn't re-read the whole spec/plan. Same for reviewers: hand them the
-   changed files/diff directly.
-2. When it returns, run the reviews IN PARALLEL:
+1. Give the coder THIS phase only — its scope + the chosen approach, quoted INLINE
+   from the phase's `plan.md` block plus the one-line solution from `spec.md`, and
+   the feature dir path. Hand it the EXACT files to touch as paths — and the
+   function/symbol or line range when `plan.md`'s `Files:` names them — so it Reads
+   those spots directly instead of Grep-walking the tree to locate them. A reused
+   coder already knows most of this: send only what's NEW for this phase, and don't
+   have it re-read the whole spec/plan.
+2. When it returns, run the reviews IN PARALLEL (freshly spawned) — hand each the
+   changed files/diff and exact paths directly, never make them re-scan to find the
+   change:
    - `code-reviewer` (logic/quality) — ALWAYS, every phase, every tier.
    - `security-scan-fast` (fast security pass) — ONLY when this phase touches a
      security-sensitive surface: auth/authz, input handling/parsing, crypto or

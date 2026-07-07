@@ -15,7 +15,8 @@
 
 ### Phase 1 — <title>
 - Scope: <what this phase does>
-- Files: <files>
+- Files: <exact paths + the function/symbol or line range to touch where known — so
+  the coder Reads the spot directly instead of searching for it>
 - Done when: <acceptance criteria>
 - Verify: <test/command/output that proves it — becomes the Evidence ledger>
 - Rollback: <checkpoint / how to revert this phase cleanly>
