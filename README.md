@@ -30,7 +30,7 @@ The domain isn't hardcoded — it's read from your `conventions.md` (via `/dev-w
 /plugin install dev-workflow@dev-workflow-marketplace
 ```
 
-> Update later: `/plugin marketplace update dev-workflow-marketplace`
+> Update later: `/plugin marketplace update dev-workflow-marketplace` — see the [changelog](CHANGELOG.md) for what's new.
 
 ## Quick start
 
