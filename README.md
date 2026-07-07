@@ -1,6 +1,6 @@
 # 🛠️ dev-workflow
 
-**A spec-driven development workflow for Claude Code — domain-agnostic, review-gated, safe by default.**
+**A Claude Code plugin for spec-driven development — research, plan, then build each feature in reviewed phases, with AI code review and security review at every step. Domain-agnostic, review-gated, safe by default.**
 
 Every feature runs the same disciplined gauntlet — and *you* are the final boss at every gate:
 
