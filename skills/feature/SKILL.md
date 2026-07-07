@@ -26,7 +26,14 @@ and keep the conversation with the user — you don't do those yourself.
    `/dev-workflow:status` read this). Switch active features by updating this file;
    multiple can coexist.
 
-## Triage — size the workflow to the feature
+## Model routing — per-agent, user-overridable
+Each agent has a sensible default model in its `agents/*.md` frontmatter (cheap
+models scout/review, Opus writes code). If `.dev-workflow/models.json` exists, read
+it ONCE now: it maps agent name → model (aliases `opus`/`sonnet`/`haiku`/`fable`, a
+full model ID, or `inherit`; keys starting with `_` are ignored). When you spawn an
+agent named there, pass that model as the spawn-time model override; for any agent
+NOT listed, use its frontmatter default. If the file is absent or unparseable,
+every agent keeps its default — never block on this.
 Before Stage 1, classify the feature to scale the machinery and save tokens.
 Default to the LIGHTER tier when unsure; tell the user the tier and let them bump
 it up.

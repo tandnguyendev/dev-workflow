@@ -54,10 +54,10 @@ Working docs scaffold automatically under `.dev-workflow/features/<slug>/`; mult
 | `/dev-workflow:checkpoints` | List auto-snapshots |
 | `/dev-workflow:rollback` | Restore to a checkpoint (safe, reversible) |
 
-**Subagents** — model routing is tiered to save tokens: cheap models scout and review, Opus is reserved for writing code. Change it in any `agents/*.md`.
+**Subagents** — model routing is tiered to save tokens: cheap models scout and review, Opus is reserved for writing code. These are **defaults you can override per agent** (see below).
 
-| Agent | Model | Role |
-|-------|-------|------|
+| Agent | Default model | Role |
+|-------|---------------|------|
 | `domain-researcher` | Haiku 4.5 | Domain/stack research (read-only + web) |
 | `solution-architect` | Haiku 4.5 | One solution option per angle (panel) |
 | `plan-reviewer` | inherit | Adversarial plan review before coding |
@@ -65,6 +65,16 @@ Working docs scaffold automatically under `.dev-workflow/features/<slug>/`; mult
 | `code-reviewer` | Sonnet 5 | Logic/quality review |
 | `security-scan-fast` | Fable 5 | Fast per-phase security scan |
 | `security-audit` | Sonnet 5 | Deep final cross-phase audit |
+
+**Pick your own models** — three ways, no plugin edits (which get overwritten on update):
+
+1. **Per agent** (recommended) — drop a `.dev-workflow/models.json` mapping agent → model; the orchestrator applies it at spawn time. Omitted agents keep their default. Copy the plugin's `templates/models.json` to start:
+   ```json
+   { "coder": "sonnet", "security-audit": "opus" }
+   ```
+   Values take aliases (`opus`/`sonnet`/`haiku`/`fable`), full model IDs, or `inherit` (use your session's model). This keeps each agent's tuned prompt — only the model changes. (`.dev-workflow/` is gitignored, so this is per-developer; un-ignore the file if you want to commit a team-wide policy.)
+2. **All agents at once** — set `CLAUDE_CODE_SUBAGENT_MODEL=<model>` before launching; every subagent uses it. Blunt but zero-config.
+3. **Fully replace an agent** — put a `.claude/agents/<name>.md` in your project (it shadows the plugin's). Use this to change the *prompt* too, not just the model — you take over its whole definition.
 
 ## Safety & reliability
 
