@@ -12,6 +12,8 @@ import os
 import re
 import sys
 
+from _workflow import docs_dir, iter_phases, read
+
 # Ensure UTF-8 output regardless of the host locale (Windows pipes default to
 # cp1252, which mangles em dashes and other non-ASCII in feature names).
 try:
@@ -41,26 +43,6 @@ def read_input():
     return root, source
 
 
-def read(path):
-    try:
-        with open(path, "r", encoding="utf-8") as fh:
-            return fh.read()
-    except Exception:
-        return None
-
-
-def docs_dir(root):
-    """Resolve the active feature's doc dir. Falls back to the project root for
-    the legacy single-feature layout. Returns (dir, slug_or_None)."""
-    active = read(os.path.join(root, ".dev-workflow", "active"))
-    if active:
-        slug = next((l.strip() for l in active.splitlines() if l.strip()), "")
-        d = os.path.join(root, ".dev-workflow", "features", slug)
-        if slug and os.path.isdir(d):
-            return d, slug
-    return root, None
-
-
 def title_from(text, prefix):
     if not text:
         return None
@@ -83,14 +65,7 @@ def main():
                or slug or "(unnamed)")
 
     # Phase headings (and the Final review section) and their approval state.
-    phases = []
-    for m in re.finditer(r"^##\s+(Phase[^\n]*|Final review[^\n]*)$", log, re.MULTILINE):
-        block = log[m.end():]
-        nxt = re.search(r"^##\s+", block, re.MULTILINE)
-        block = block[:nxt.start()] if nxt else block
-        approved = bool(re.search(r"\[[xX]\]\s*USER APPROVED", block))
-        phases.append((m.group(1).strip(), approved))
-
+    phases = [(title, approved) for title, _body, approved in iter_phases(log)]
     current = next((name for name, ok in phases if not ok), None)
 
     gate = read(os.path.join(root, ".approval-gate"))

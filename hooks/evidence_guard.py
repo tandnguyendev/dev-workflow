@@ -16,27 +16,9 @@ import os
 import re
 import sys
 
+from _workflow import docs_dir, iter_phases, read
+
 REVIEW_DONE = re.compile(r"\[[xX]\]\s*(?:code-reviewed|full code review)")
-APPROVED = re.compile(r"\[[xX]\]\s*USER APPROVED")
-
-
-def read(path):
-    try:
-        with open(path, "r", encoding="utf-8") as fh:
-            return fh.read()
-    except Exception:
-        return None
-
-
-def docs_dir(root):
-    """Active feature's doc dir, or the project root (legacy single-feature)."""
-    active = read(os.path.join(root, ".dev-workflow", "active"))
-    if active:
-        slug = next((l.strip() for l in active.splitlines() if l.strip()), "")
-        d = os.path.join(root, ".dev-workflow", "features", slug)
-        if slug and os.path.isdir(d):
-            return d
-    return root
 
 
 def evidence_empty(body):
@@ -73,20 +55,17 @@ def main():
         sys.exit(0)
 
     root = os.environ.get("CLAUDE_PROJECT_DIR") or payload.get("cwd") or os.getcwd()
-    log = read(os.path.join(docs_dir(root), "phase-log.md"))
+    log = read(os.path.join(docs_dir(root)[0], "phase-log.md"))
     if not log:
         sys.exit(0)  # no active workflow
 
-    heads = list(re.finditer(r"^##\s+(Phase[^\n]*|Final review[^\n]*)$", log, re.MULTILINE))
-    for i, h in enumerate(heads):
-        end = heads[i + 1].start() if i + 1 < len(heads) else len(log)
-        body = log[h.end():end]
-        if APPROVED.search(body):
+    for title, body, approved in iter_phases(log):
+        if approved:
             continue  # this phase is done; look at the next
         # First UNAPPROVED section = the current one. Gate only this one.
         if REVIEW_DONE.search(body) and evidence_empty(body):
             block(
-                "[dev-workflow evidence gate] '" + h.group(1).strip() + "' is marked "
+                "[dev-workflow evidence gate] '" + title + "' is marked "
                 "reviewed but its Evidence ledger in phase-log.md is empty. Before "
                 "yielding for the user's approval, fill this phase's `- Evidence:` line "
                 "with CITED proof — test/command output, file:line, the concrete cases "
