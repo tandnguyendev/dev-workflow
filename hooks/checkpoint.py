@@ -45,6 +45,11 @@ def git(project_dir, args, env_extra=None, check=True):
     env = os.environ.copy()
     env["GIT_TERMINAL_PROMPT"] = "0"
     env["GIT_OPTIONAL_LOCKS"] = "0"
+    # Shadow-ref commits are internal plumbing; give them a stable identity so a
+    # snapshot never fails just because the user hasn't configured git
+    # user.name/user.email yet (e.g. a freshly `git init`ed repo, or a CI runner).
+    env["GIT_AUTHOR_NAME"] = env["GIT_COMMITTER_NAME"] = "dev-workflow"
+    env["GIT_AUTHOR_EMAIL"] = env["GIT_COMMITTER_EMAIL"] = "dev-workflow@localhost"
     if env_extra:
         env.update(env_extra)
     try:
