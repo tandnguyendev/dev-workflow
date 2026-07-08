@@ -4,20 +4,12 @@
 
 Every feature runs the same disciplined gauntlet — and *you* are the final boss at every gate:
 
-```mermaid
-flowchart TD
-    C[detect conventions] --> R[research] --> O[3+ solution options] --> P[phased plan]
-    P --> B[build one phase]
-    B --> V{{"AI review — code + security"}}
-    V --> Y["you approve, AFTER the AI"]
-    Y -->|next phase| B
-    Y -->|all phases done| A[final cross-phase audit]
-    A --> S([ship it])
-
-    style Y fill:#ffe08a,stroke:#d98f00,color:#000
-    style V fill:#e6e0ff,stroke:#6b4fd8,color:#000
-    style S fill:#c8f7c5,stroke:#2fae4f,color:#000
-```
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
+    <img alt="The feature gauntlet: detect conventions → research → 3+ solution options → phased plan → per-phase loop (build → AI code + security review → you approve) → final cross-phase audit → ship it" src="assets/flow-light.svg" width="460">
+  </picture>
+</p>
 
 > Pair programming, except your pair is six robots who *actually read the spec* — and you still hold the almighty **“nope.”**
 
