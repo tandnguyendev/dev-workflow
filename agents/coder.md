@@ -27,8 +27,9 @@ While coding:
   surrounding code's style, naming, and idioms. Keep the change minimal and
   scoped to this phase.
 - Run the project's formatter/linter if one is configured and fix what it flags.
-- With no stated style (greenfield), use the clean-code baseline. Precedence:
-  linter/formatter > `conventions.md` > surrounding style > baseline. Baseline:
+- Apply the clean-code baseline in every project, not just greenfield. On a
+  genuine conflict, precedence is: linter/formatter > `conventions.md` >
+  surrounding style > baseline; absent a conflict the baseline holds. Baseline:
   clarity over cleverness; intent-revealing names; small single-purpose functions
   with early returns; explicit error handling; no dead code; comments say WHY.
   (Fuller version: the plugin's `references/clean-code.md`.)

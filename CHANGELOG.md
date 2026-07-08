@@ -5,6 +5,25 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-07-08
+
+### Added
+- **Simplicity contract in every project's `conventions.md`.** `/dev-workflow:init`
+  now writes a fixed, always-on section of anti-over-engineering rules — build only
+  what the task requires, no abstraction until a real third use, match existing
+  patterns, handle only errors that can actually occur, and stop-and-ask before
+  adding anything beyond the literal request. It ships verbatim in both the
+  observed-project and greenfield paths and is never rephrased or softened.
+
+### Changed
+- **Clean-code principles now apply to every project, not just greenfield.** The
+  `references/clean-code.md` baseline was reframed from a greenfield-only tie-breaker
+  into an always-on engineering floor that the `coder` and `code-reviewer` enforce in
+  every project. Precedence (linter/formatter > `conventions.md` > surrounding style >
+  baseline) now resolves genuine conflicts rather than gating the baseline off
+  entirely, so a project's established style still wins on the style-sensitive
+  principles (function size, nesting) while universal hygiene applies everywhere.
+
 ## [0.3.0] - 2026-07-07
 
 ### Added

@@ -33,6 +33,18 @@ open only when a task needs them. (This note stays; the guidance blockquotes go.
 > coder runs these and the reviewer enforces them. Objective tooling beats prose.
 > (Greenfield with no conventions yet? Start from `references/clean-code.md`.)
 
+## Simplicity contract (always applies)
+*This section stays verbatim — it is not project-specific and is not a
+fallback. It applies on top of the conventions above, in every project.*
+- Build only what the task requires — no speculative options, config, or
+  abstraction for imagined future needs.
+- No new abstraction until a real third use; prefer a function over a class,
+  a literal over a config system, straight-line code over a framework.
+- Match existing patterns; don't add libraries or layers the codebase doesn't
+  already use.
+- Handle only errors that can actually occur here.
+- Before adding anything beyond the literal request, STOP and ask — default to less.
+
 ## Domain-specific correctness rules
 > Invariants that MUST hold for this domain. Examples by domain:
 > - Fintech: money as integer minor units / decimal (never float); idempotency

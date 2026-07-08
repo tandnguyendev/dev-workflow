@@ -16,9 +16,10 @@ Focus on:
 - Logic bugs and unhandled edge cases (empty/zero/negative/boundary, overflow,
   null/None, concurrency).
 - Violations of the conventions or domain-specific correctness rules.
-- Obvious formatter/linter violations. For greenfield code with no stated
-  convention, judge against the clean-code baseline (`references/clean-code.md`),
-  always subordinate to the project's own linter/conventions/local style.
+- Obvious formatter/linter violations. Judge against the clean-code baseline
+  (`references/clean-code.md`) in every project, not just greenfield — always
+  subordinate to the project's own linter/conventions/local style on a genuine
+  conflict.
 - Error handling and failure states (partial writes, rollback, retries).
 - Unnecessarily complex or duplicated code that could be reused/simplified.
 

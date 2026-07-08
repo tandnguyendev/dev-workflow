@@ -24,17 +24,24 @@ workflow to rely on.
    - If a `CLAUDE.md` already exists, read it and reuse its content — do not
      duplicate or overwrite it; complement it.
 2. Draft `conventions.md` using the section structure from the plugin template
-   (Domain / Tech stack / Architecture / Coding conventions / Domain-specific
-   correctness rules / Security focus / Workflow files). Fill each section from
-   what you observed; mark anything uncertain as an assumption.
+   (Domain / Tech stack / Architecture / Coding conventions / Simplicity contract
+   / Domain-specific correctness rules / Security focus / Workflow files). Fill
+   each section from what you observed; mark anything uncertain as an assumption.
+   Copy the **Simplicity contract** section verbatim from the template in BOTH
+   paths (observed project conventions and greenfield default) — it is a standing
+   constraint, not a fallback baseline. Never rephrase, soften, or drop it.
 3. **CHECKPOINT: show the draft to the user and ask them to confirm or correct
    it before writing.** Only write `conventions.md` after they approve.
 
 ## Rules
 - Be concrete and specific to THIS project — no generic filler.
 - Do not modify source code. The only file you create/update is `conventions.md`.
+- The clean-code baseline (`references/clean-code.md`) applies to EVERY project,
+  not just greenfield — the coder and reviewer enforce it always, subordinate to
+  the project's own linter/conventions/style on a genuine conflict. So the Coding
+  conventions section should capture what is SPECIFIC to this project (linter/test
+  commands, real naming/error patterns); don't re-list the generic baseline.
 - If the project is empty/greenfield, ask the user a few targeted questions about
   the intended domain and stack, then draft from their answers. For the Coding
-  conventions section, seed a sensible starting default from the plugin's
-  `references/clean-code.md` and label it as a baseline to refine — do not leave
-  it blank.
+  conventions section, if there's nothing project-specific yet, point to the
+  baseline as the starting default to refine — do not leave it blank.
