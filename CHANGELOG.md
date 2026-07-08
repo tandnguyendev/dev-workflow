@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   patterns, handle only errors that can actually occur, and stop-and-ask before
   adding anything beyond the literal request. It ships verbatim in both the
   observed-project and greenfield paths and is never rephrased or softened.
+- **`/dev-workflow:init` now surfaces model routing.** After writing
+  `conventions.md`, init points you to the three ways to tune models — per-agent
+  `.dev-workflow/models.json` (recommended), the `CLAUDE_CODE_SUBAGENT_MODEL` env
+  var, or a full `.claude/agents/<name>.md` override — so routing is discoverable
+  during setup, not just in the README. Init still writes only `conventions.md`.
 
 ### Changed
 - **Clean-code principles now apply to every project, not just greenfield.** The

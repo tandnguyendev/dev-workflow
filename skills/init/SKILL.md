@@ -32,6 +32,19 @@ workflow to rely on.
    constraint, not a fallback baseline. Never rephrase, soften, or drop it.
 3. **CHECKPOINT: show the draft to the user and ask them to confirm or correct
    it before writing.** Only write `conventions.md` after they approve.
+4. After writing, point the user to **model routing** (optional, one line each) so
+   they can tune cost/quality before running a feature:
+   - **Per-agent (recommended):** copy the plugin's `templates/models.json` to
+     `.dev-workflow/models.json` and map any of the seven agents
+     (`domain-researcher`, `solution-architect`, `plan-reviewer`, `coder`,
+     `code-reviewer`, `security-scan-fast`, `security-audit`) to a model — an alias
+     (`opus`/`sonnet`/`haiku`/`fable`), a full model ID, or `inherit`. Omitted
+     agents keep their default; prompts are untouched.
+   - **All agents at once:** set `CLAUDE_CODE_SUBAGENT_MODEL=<model>` before launching.
+   - **Replace an agent entirely:** add `.claude/agents/<name>.md` to shadow the
+     plugin's (changes the prompt too, not just the model).
+   Mention it and move on — do NOT create `models.json` yourself; init writes only
+   `conventions.md`.
 
 ## Rules
 - Be concrete and specific to THIS project — no generic filler.
