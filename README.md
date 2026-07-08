@@ -6,8 +6,8 @@ Every feature runs the same disciplined gauntlet — and *you* are the final bos
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
-    <img alt="The feature gauntlet: detect conventions → research → 3+ solution options → phased plan → per-phase loop (build → AI code + security review → you approve) → final cross-phase audit → ship it" src="assets/flow-light.svg" width="460">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/tandnguyendev/dev-workflow/main/assets/flow-dark.svg">
+    <img alt="The feature gauntlet: detect conventions → research → 3+ solution options → phased plan → per-phase loop (build → AI code + security review → you approve) → final cross-phase audit → ship it" src="https://raw.githubusercontent.com/tandnguyendev/dev-workflow/main/assets/flow-light.svg" width="460">
   </picture>
 </p>
 
