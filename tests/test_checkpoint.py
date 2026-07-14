@@ -56,6 +56,35 @@ def test_rollback_preserves_live_gate(git_repo):
     assert (git_repo / ".approval-gate").read_text().strip() == "UNLOCKED"
 
 
+def test_rollback_does_not_destroy_the_workflow_docs(git_repo):
+    # A repo that COMMITS its workflow docs — normal, since they are the durable
+    # source of truth. Snapshots deliberately exclude `.dev-workflow/`, so the
+    # snapshot tree has no such path, and `git read-tree -u --reset` DELETES tracked
+    # paths that the target tree lacks. That silently destroyed the phase log — and
+    # with it, the Evidence ledger written during the phase, which exists nowhere
+    # else. `status.py` and the evidence gate then both fail open and go quiet, so
+    # one rollback disarmed the rest of the safety net.
+    import subprocess
+    docs = git_repo / ".dev-workflow" / "features" / "f"
+    docs.mkdir(parents=True)
+    (docs / "phase-log.md").write_text("# Phase log\n- Evidence: committed\n")
+    subprocess.run(["git", "add", "-A"], cwd=git_repo, check=True)
+    subprocess.run(["git", "commit", "-qm", "track workflow docs"], cwd=git_repo, check=True)
+
+    (git_repo / "a.txt").write_text("two\n")
+    cp(git_repo, "snapshot")
+    # The ledger for the phase currently under way — written AFTER the snapshot.
+    (docs / "phase-log.md").write_text("# Phase log\n- Evidence: pytest -q -> 12 passed\n")
+    (git_repo / "a.txt").write_text("three\n")
+
+    cp(git_repo, "rollback")
+    assert (git_repo / "a.txt").read_text() == "two\n"      # code DID roll back
+    assert (docs / "phase-log.md").is_file(), "rollback deleted the phase log"
+    # ...and it is the LIVE ledger, not a stale snapshot of it: the log records what
+    # happened, and rolling code back does not un-happen it.
+    assert "12 passed" in (docs / "phase-log.md").read_text()
+
+
 def test_non_git_dir_is_noop(tmp_path):
     out = cp(tmp_path, "snapshot").stdout
     assert "no change" in out.lower()

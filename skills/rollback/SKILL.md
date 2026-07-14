@@ -1,14 +1,14 @@
 ---
 name: rollback
 description: Undo an AI agent's changes by restoring the git working tree to a checkpoint. Safe and reversible — saves current state first, never moves your branch, never hard-deletes. Optionally pass a checkpoint ref; defaults to the most recent.
-allowed-tools: Bash(python "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" list), Bash(python "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" undo)
+allowed-tools: Bash(python3 "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" list)
 ---
 
 Restore the working tree to a checkpoint, undoing recent agent changes. This is
 safe: it first saves the current state as a reversible `pre-rollback` checkpoint,
 never moves your branch/HEAD, and never hard-deletes anything from git.
 
-The CLI is `python "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" <cmd>` (this
+The CLI is `python3 "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" <cmd>` (this
 resolves to the plugin's `hooks/checkpoint.py`).
 
 Steps:
@@ -16,18 +16,20 @@ Steps:
    they can confirm the target (default = most recent non-`pre-rollback`
    checkpoint):
    ```
-   python "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" list
+   python3 "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" list
    ```
 2. Perform the rollback (pass the chosen ref, or omit for the default):
    ```
-   python "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" rollback [ref]
+   python3 "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" rollback [ref]
    ```
    This step is intentionally NOT pre-approved — because a rollback rewrites the
    working tree, Claude Code will ask the user to permit this exact command. That
-   confirmation is expected; wait for it.
+   confirmation is expected; wait for it. `undo` is not pre-approved either: it is
+   itself a rollback (to the `pre-rollback` checkpoint) and rewrites the working
+   tree just the same, so it gets the same confirmation. Only `list` is read-only.
 3. Relay the tool's output verbatim, including how to reverse it:
    ```
-   python "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" undo
+   python3 "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" undo
    ```
    Also note that files CREATED since the checkpoint are left in place (they show
    up in `git status`) and can be removed manually if unwanted.

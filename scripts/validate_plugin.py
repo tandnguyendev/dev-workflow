@@ -11,6 +11,7 @@ import glob
 import json
 import os
 import re
+import shutil
 import sys
 
 ROOT = sys.argv[1] if len(sys.argv) > 1 else "."
@@ -75,6 +76,25 @@ def resolve_hook_script(command):
     return rel
 
 
+def check_interpreter(cmd):
+    """The interpreter a hook names must actually exist on PATH.
+
+    Hooks fail open, so an unlaunchable interpreter disables the approval gate,
+    the checkpoints and the evidence gate SILENTLY. `python` in particular does
+    not exist on macOS or on a stock Debian/Ubuntu/Fedora box — only `python3`
+    is portable — and a CI runner that happens to provide both hides this.
+    """
+    interp = cmd.split(None, 1)[0] if cmd.split() else ""
+    if not interp or interp.startswith("$"):
+        return
+    if interp == "python":
+        errors.append(
+            f"hooks.json: command invokes `python`, which does not exist on macOS "
+            f"or a stock Linux box — use `python3`: {cmd}")
+    elif shutil.which(interp) is None:
+        warnings.append(f"hooks.json: interpreter '{interp}' not found on PATH: {cmd}")
+
+
 # --- plugin.json ---
 check_json(".claude-plugin/plugin.json", ["name", "description"])
 
@@ -104,13 +124,14 @@ if os.path.isfile(hooks_path):
             for entry in arr:
                 for h in entry.get("hooks", []):
                     cmd = h.get("command", "")
+                    check_interpreter(cmd)
                     rel = resolve_hook_script(cmd)
                     if rel:
                         if not os.path.isfile(os.path.join(ROOT, rel)):
                             errors.append(f"hooks.json: referenced script not found: {rel}")
                     elif "${CLAUDE_PLUGIN_ROOT}" not in cmd:
                         warnings.append(f"hooks.json: command may not resolve portably: {cmd}")
-        ok.append("hooks.json: events + referenced scripts checked")
+        ok.append("hooks.json: events + referenced scripts + interpreters checked")
 
 
 def lint_frontmatter_file(path, kind, require_desc=True):

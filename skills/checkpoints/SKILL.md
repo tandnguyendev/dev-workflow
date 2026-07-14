@@ -1,14 +1,14 @@
 ---
 name: checkpoints
 description: List the dev-workflow checkpoints — snapshots taken automatically before each agent edit — for the current git project. Read-only.
-allowed-tools: Bash(python "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" list)
+allowed-tools: Bash(python3 "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" list)
 ---
 
 List the available checkpoints for this project and present them to the user.
 
 Run exactly:
 ```
-python "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" list
+python3 "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" list
 ```
 (That resolves to the plugin's `hooks/checkpoint.py`.)
 

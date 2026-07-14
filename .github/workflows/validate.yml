@@ -15,13 +15,13 @@ jobs:
           python-version: "3.x"
 
       - name: Static plugin validation
-        run: python scripts/validate_plugin.py .
+        run: python3 scripts/validate_plugin.py .
 
       - name: Install test deps
         run: pip install pytest
 
       - name: Hook tests
-        run: python -m pytest -q
+        run: python3 -m pytest -q
 
       # Optional: the Claude Code CLI's own validator, if available in CI.
       # Non-blocking because the CLI may not be installed on the runner.

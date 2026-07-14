@@ -17,6 +17,35 @@ and keep the conversation with the user — you don't do those yourself.
   unapproved phase.
 - Use the feature description from arguments if given; otherwise ask first.
 
+## The phase-log checkboxes are MACHINE-PARSED — write them literally
+
+`phase-log.md` is not just prose for humans. The hooks parse it with regexes, and
+the exact strings below are load-bearing. Keep every phase section in the shape
+`templates/phase-log.md` defines; a phase you write up in freeform prose is a phase
+the safety hooks cannot see, and they fail SILENTLY when they can't see it.
+
+| String | Who writes it | When | What reads it |
+|---|---|---|---|
+| `## Phase N — <title>` | you | at scaffold | all hooks — a heading that doesn't start with `## Phase` or `## Final review` (case-insensitive) is not a section, and its content is absorbed into the phase above |
+| `[x] coded` | the `coder` | when it finishes implementing | — |
+| `- Evidence: <cited proof>` | the `coder` pre-fills what it RAN (test/command output); you AUGMENT with what the reviewers verified | coder on return, you after reviews, before yielding | the Stop evidence gate — an empty or placeholder ledger is refused |
+| `[x] code-reviewed` (Final review uses `full code review`) | you | after `code-reviewer` returns AND its findings are resolved | **the Stop evidence gate** — ticking either string ARMS it: from here on, ending your turn with an empty `- Evidence:` line is blocked |
+| `[x] security-scanned` | you | after `security-scan-fast` returns; leave unticked when the phase's surface didn't warrant a scan | — |
+| `[x] USER APPROVED` | **you, but ONLY after the user actually said so** | at the approval checkpoint | `status.py`, and the evidence gate's "which phase is current" logic |
+
+The `coder` owns `[x] coded` and the first draft of `- Evidence:` because it is the
+one that ran the code. Everything a REVIEW or the USER attests to is yours: the
+review boxes, the augmented evidence, and `USER APPROVED`. The coder must never tick
+a review box or `USER APPROVED` — see `agents/coder.md`.
+
+`[x] USER APPROVED` is the one box you must never tick on your own initiative. No
+hook can tell your tick from the user's — writing it without an explicit approval
+from the user forges their sign-off, advances the phase, and switches the evidence
+gate to the NEXT phase. If you are unsure whether they approved, they did not: ask.
+
+Tick each box as its step completes, not in a batch at the end — the gate can only
+protect a phase it knows has been reviewed.
+
 ## Setup — feature workspace
 1. Derive a short kebab-case `slug` (e.g. `wallet-topup`).
 2. Create `.dev-workflow/features/<slug>/` and scaffold `spec.md`, `plan.md`,
@@ -65,8 +94,12 @@ and let `domain-researcher` infer the domain from the description + code.
    performance-, risk-first) with the description + research summary — independent
    context reduces single-thread bias.
 2. Synthesize into `spec.md` section 3 as a comparison table (complexity /
-   performance / security risk / effort). Merge near-duplicates; keep ≥3 distinct
-   options.
+   performance / security risk / effort). Merge near-duplicates. Present the
+   options the panel ACTUALLY returned — one per architect, minus merges. Do NOT
+   invent an extra option to hit a count: a synthesized option you wrote yourself
+   carries the single-thread bias the panel exists to remove. If you think the
+   panel missed an angle, say so to the user and offer to spawn another architect
+   for it; don't quietly fill the gap.
 3. Give your recommendation first, but don't decide for the user.
 4. **CHECKPOINT: use AskUserQuestion so the user picks. Stop and wait.** Record
    the choice + rationale in `spec.md` sections 4–5.
@@ -133,18 +166,31 @@ For each phase in `plan.md`, in order:
    hardcoded secrets, missing authz on a new endpoint) when they are cheap to fix.
    EMERGENT, cross-phase vulnerabilities are the Stage 5 `security-audit`'s job, so
    skipping the scan on non-sensitive phases loses nothing there.
-3. Summarize the review(s) that ran for the user. Update `phase-log.md`.
+3. Summarize the review(s) that ran for the user. Update `phase-log.md` — using the
+   LITERAL checkbox strings from the table above, which the hooks parse. The coder
+   already ticked `[x] coded` and pre-filled `- Evidence:` with what it ran; your job
+   here is the review boxes and evidence:
    - If reviewers found issues, have `coder` fix them, then re-review.
-   - **Fill the phase's `- Evidence:` ledger** with CITED proof it works:
+   - Tick `[x] code-reviewed` once `code-reviewer`'s findings are resolved (plus
+     `[x] security-scanned` if the scan ran).
+   - **Augment the `- Evidence:` ledger** so it carries CITED proof it works:
      test/command output, `file:line` refs, concrete cases verified — one artifact
-     per acceptance criterion, no "looks fine". (A `Stop`-hook evidence gate nudges
-     you if you yield for approval with an empty ledger.)
-4. **CHECKPOINT: the user reviews AFTER the AI. Stop and wait.** On approval, mark
-   the phase APPROVED in `phase-log.md` and move on. Never advance unapproved.
+     per acceptance criterion, no "looks fine". Ticking `[x] code-reviewed` arms the
+     `Stop`-hook evidence gate: it will refuse to let you yield for approval while
+     this line is still empty or a placeholder, and it will keep refusing.
+4. **CHECKPOINT: the user reviews AFTER the AI. Stop and wait.** ONLY after the user
+   has actually approved, tick `[x] USER APPROVED` in `phase-log.md` and move on.
+   Never tick it yourself to advance; never advance unapproved.
 5. If it's a git repo and the user wants per-phase commits, commit scoped to this
    phase (`Phase N: <title>`). Skip otherwise. Keeps the final-audit diff clean.
 
 ## Stage 5 — Final review (whole feature)  (skip if trivial + single-phase)
+**If you SKIP this stage, DELETE the `## Final review` section from `phase-log.md`.**
+The template always scaffolds that section, but nothing ever ticks it when the stage
+is skipped — and `status.py` reports the first unapproved section as the current one,
+so the finished feature is reported as stuck on "Final review" forever. Removing the
+section is what marks the feature done.
+
 1. Run over all phases together:
    - `code-reviewer` on CROSS-PHASE issues ONLY — inconsistencies, phase
      interactions, integration seams. Do NOT re-review files from scratch (done

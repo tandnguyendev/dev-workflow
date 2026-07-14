@@ -15,7 +15,22 @@ import os
 import re
 
 # The single source of truth for the phase-log structure.
-PHASE_HEADING = re.compile(r"^##\s+(Phase[^\n]*|Final review[^\n]*)$", re.MULTILINE)
+#
+# The HEADING match is case-insensitive on purpose: it decides whether a phase
+# exists at all, and a heading it misses does not error — its body is silently
+# absorbed into the phase above it, so a `[x] USER APPROVED` under a missed
+# `## Final Review` (capital R) marked the WRONG phase approved and switched the
+# evidence gate off for the rest of the feature. A human writing `Final Review` for
+# `Final review` should not trip that. Kept to `##` (the template's depth) and
+# anchored with `\b` so it matches structural headings, not `## Final reviewer notes`
+# or a `Phased plan` line.
+PHASE_HEADING = re.compile(
+    r"^##\s+(Phase\b[^\n]*|Final\s+review\b[^\n]*)$", re.MULTILINE | re.IGNORECASE)
+# APPROVED stays CASE-SENSITIVE. It gates whether a phase is done, so its failure
+# must be safe: an unrecognized tick leaves the phase UNapproved (the gate keeps
+# protecting it), which is the harmless direction. Case-insensitive would do the
+# opposite — an incidental lowercase "user approved" in prose would wave an
+# unproven phase through, exactly the fail-open the hooks exist to prevent.
 APPROVED = re.compile(r"\[[xX]\]\s*USER APPROVED")
 
 STATE_DIR = ".dev-workflow"

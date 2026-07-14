@@ -16,10 +16,16 @@ Focus on:
 - Logic bugs and unhandled edge cases (empty/zero/negative/boundary, overflow,
   null/None, concurrency).
 - Violations of the conventions or domain-specific correctness rules.
-- Obvious formatter/linter violations. Judge against the clean-code baseline
-  (`references/clean-code.md`) in every project, not just greenfield — always
-  subordinate to the project's own linter/conventions/local style on a genuine
-  conflict.
+- Obvious formatter/linter violations, and the clean-code baseline below — it
+  applies in every project, not just greenfield. On a genuine conflict, precedence
+  is: linter/formatter > `conventions.md` > surrounding style > baseline; absent a
+  conflict the baseline holds. Baseline: clarity over cleverness; intent-revealing
+  names; small single-purpose functions with early returns; explicit error handling;
+  no dead code; comment only what the code can't say itself.
+  (The baseline is inlined here on purpose: your cwd is the USER's project and you
+  have no `${CLAUDE_PLUGIN_ROOT}`, so you cannot open the plugin's
+  `references/clean-code.md` — pointing you at that path meant you and `coder`, who
+  has the baseline inlined, were judging against different standards.)
 - Error handling and failure states (partial writes, rollback, retries).
 - Unnecessarily complex or duplicated code that could be reused/simplified.
 - Comment noise: comments that narrate what the next line does, explain where the

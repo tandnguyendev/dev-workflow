@@ -34,7 +34,10 @@ import time
 
 REF_PREFIX = "refs/dev-workflow/checkpoints"
 MUTATING_TOOLS = {"Edit", "Write", "MultiEdit", "Bash"}
-GATE_NAME = ".approval-gate"  # kept out of checkpoints; never restored by rollback
+# Both are kept OUT of checkpoints and preserved live across a rollback: they are
+# the workflow's own memory, not part of the code being rolled back.
+GATE_NAME = ".approval-gate"
+STATE_DIR = ".dev-workflow"
 _GIT = shutil.which("git") or "git"
 # Defense-in-depth: never let repo config run commands or prompt/block us.
 _HARDEN = ["-c", "core.fsmonitor="]
@@ -111,7 +114,7 @@ def snapshot(project_dir, tool_name="", force=False):
         # or clobber the phase log. (restore_tree independently preserves the
         # live gate too, so even pre-existing refs cannot flip it.)
         git(project_dir, ["rm", "-r", "--cached", "--ignore-unmatch", "-q",
-                          "--", ":/" + GATE_NAME, ":/.dev-workflow"],
+                          "--", ":/" + GATE_NAME, ":/" + STATE_DIR],
             env_extra=env, check=False)
         _, tree = git(project_dir, ["write-tree"], env_extra=env)
     finally:
@@ -176,26 +179,56 @@ def _resolve_target(project_dir, ref):
 def restore_tree(project_dir, commit):
     """Set the working tree (and index) to `commit`'s tree WITHOUT moving the
     branch; then reset the index back to HEAD so the delta shows as unstaged.
-    Untracked files created since the checkpoint are left in place (never
-    deleted). The live `.approval-gate` state is preserved across the restore so
-    a rollback can never silently unlock/relock the approval gate."""
+    Untracked files created since the checkpoint are left in place (never deleted).
+
+    The live `.approval-gate` AND `.dev-workflow/` are preserved across the restore.
+    Both are excluded from snapshots, and `git read-tree -u --reset` DELETES tracked
+    paths the target tree does not contain — so in a repo that commits its workflow
+    docs (a normal thing to do; they are the durable source of truth) a rollback
+    would otherwise wipe `.dev-workflow/` outright. That took the phase log with it,
+    including the Evidence ledger written during the phase, which exists nowhere
+    else; `undo` could not bring it back, because the pre-rollback snapshot excludes
+    it too. `status.py` and the evidence gate would then both fail open and go
+    silent, so a single rollback disarmed the rest of the safety net.
+
+    Rolling code back must never roll the WORKFLOW's own memory back — the log
+    records what happened, and reverting the code does not un-happen it.
+    """
     gate = os.path.join(project_dir, GATE_NAME)
-    saved = None
+    state = os.path.join(project_dir, STATE_DIR)
+
+    saved_gate = None
     if os.path.isfile(gate):
         with open(gate, "rb") as f:
-            saved = f.read()
-    git(project_dir, ["read-tree", "-u", "--reset", commit])
-    if head_sha(project_dir):
-        git(project_dir, ["reset", "-q", "HEAD"])
+            saved_gate = f.read()
+
+    stash = None
+    if os.path.isdir(state):
+        stash = tempfile.mkdtemp(prefix="dwf-state-")
+        shutil.copytree(state, os.path.join(stash, "state"), symlinks=True)
+
+    try:
+        git(project_dir, ["read-tree", "-u", "--reset", commit])
+        if head_sha(project_dir):
+            git(project_dir, ["reset", "-q", "HEAD"])
+        # Put the live workflow state back exactly as it was, overwriting whatever
+        # read-tree may have restored from an older tree.
+        if stash is not None:
+            shutil.rmtree(state, ignore_errors=True)
+            shutil.copytree(os.path.join(stash, "state"), state, symlinks=True)
+    finally:
+        if stash is not None:
+            shutil.rmtree(stash, ignore_errors=True)
+
     # Restore the gate to exactly the state it was in before the rollback.
-    if saved is None:
+    if saved_gate is None:
         try:
             os.unlink(gate)
         except OSError:
             pass
     else:
         with open(gate, "wb") as f:
-            f.write(saved)
+            f.write(saved_gate)
 
 
 def rollback(project_dir, ref=None):

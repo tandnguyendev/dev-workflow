@@ -22,6 +22,12 @@ repo root for project domain + conventions (and `CLAUDE.md` if present) — once
 again on later phases. Only open `spec.md` / `plan.md` if the inline brief is
 ambiguous — don't re-read them by default.
 
+If the project has an `.approval-gate` file that says `LOCKED`, STOP: that phase is
+waiting on the user's review, and while it is locked your edit tools AND Bash are
+blocked at the tool layer — you cannot code, and you cannot run tests. Do not try to
+work around it (you can't; the hook denies the tool call). Say the gate is locked and
+return. Only the user can unlock it, from their own shell.
+
 While coding:
 - Follow `conventions.md` and any domain-specific correctness rules; match the
   surrounding code's style, naming, and idioms. Keep the change minimal and
@@ -34,10 +40,22 @@ While coding:
   with early returns; explicit error handling; no dead code; comment only what the
   code can't say itself — never narrate the change or justify it to the reviewer,
   and match the file's existing comment density.
-  (Fuller version: the plugin's `references/clean-code.md`.)
+  (The fuller `references/clean-code.md` lives in the plugin, not in the project you
+  are working in — don't go looking for it; the baseline above is what binds you.)
 
 After implementing:
-- Update the feature's `phase-log.md` with what you changed (files, key decisions).
-- Run existing tests/build if a command is available; report results honestly.
+- Update the feature's `phase-log.md` for THIS phase. Its checkboxes are parsed by
+  the workflow's hooks, so write them literally, and only the ones that are yours:
+  - Tick `[x] coded` and fill `- Changed:` (files + key decisions).
+  - Fill `- Evidence:` with the real output of what you actually ran — the test
+    command and its result, `file:line` for the cases you verified. Never write
+    "looks fine" or leave the placeholder; a Stop hook refuses an empty ledger.
+  - **Do NOT tick `[x] code-reviewed`, `[x] security-scanned`, or `[x] USER
+    APPROVED`.** Those belong to the reviewers and the user. Ticking
+    `code-reviewed` yourself would mark your own code reviewed, which is exactly
+    the check this workflow exists to prevent — and `USER APPROVED` forges the
+    user's sign-off.
+- Run existing tests/build if a command is available; report results honestly. If
+  they fail, say so — a red suite reported as green is worse than no suite.
 - STOP. Do not review yourself or start the next phase. Return a concise diff
   summary so the orchestrator can dispatch reviewers.
