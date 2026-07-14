@@ -11,6 +11,9 @@
 .dev-workflow/
 .approval-gate
 
+# Local working notes, not part of the plugin
+/AUDIT.md
+
 # Python bytecode from local testing
 __pycache__/
 *.pyc
