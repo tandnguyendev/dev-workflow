@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.6.0] - 2026-07-14
 
+### Changed
+- **`plan.md`'s `Files:` is now a real path list, because the gate reads it.** Plans
+  were ending phases with a category ("specs") instead of paths, which makes the
+  phase's own spec file look like scope creep to the new gate. It must now name every
+  path the phase may touch, test/spec files included, and anchor to the SYMBOL rather
+  than a line range — earlier phases shift line numbers, and a stale range misdirects
+  the coder with full confidence. `plan-reviewer` flags violations.
+- **Plans are written for the coder, not the reviewer.** Folded-in review findings
+  were carrying their provenance into the plan ("plan review flagged...", "as
+  confirmed above") — the same failure as a code comment addressed to the reviewer.
+  The constraint goes in the plan; what changed and why goes in the message to the
+  user. `plan-reviewer` now phrases each fix as the constraint to write down.
+
 ### Added
 - **The evidence gate now checks reality, not prose length.** It only ever tested
   that the `- Evidence:` ledger held ≥15 characters of text — so `"ran tests, all

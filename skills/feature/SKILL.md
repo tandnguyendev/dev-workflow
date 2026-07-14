@@ -93,11 +93,23 @@ and let `domain-researcher` infer the domain from the description + code.
      with no way to verify it is a planning bug.
    - **Each phase has a rollback point.** Note where the checkpoint sits so a bad
      phase can be reverted cleanly (ties into the checkpoint/rollback machinery).
+   - **`Files:` is a real path list, and it is load-bearing.** Every file the phase
+     may touch — new files and test/spec files included — as an actual path. The
+     pre-approval gate flags changed files that aren't listed, so "specs" or "tests"
+     as a placeholder makes the phase's own spec file look like scope creep. Anchor
+     to the symbol (`updateParams`), never a line range: earlier phases shift line
+     numbers and a stale range misdirects the coder with full confidence.
+   - **Write for the coder, not the reviewer.** State each constraint; never record
+     its provenance ("plan review flagged", "as confirmed above"). A phase earns its
+     length with traps the coder would otherwise fall into and with work it can now
+     skip — not with the story of how the plan got fixed.
 3. **Adversarial plan review** (standard + complex tiers; SKIP for trivial): spawn
    the `plan-reviewer` subagent on the drafted `plan.md`. It hunts for missing
    phases, hidden dependencies, oversized/untestable phases, ordering mistakes, and
    rollback gaps. Fold its findings into `plan.md` (resequence, split, or add
-   phases) before showing the user — note what changed.
+   phases) before showing the user — fold in the CONSTRAINT, not the fact that a
+   reviewer found it. Tell the USER what changed in your message; the plan itself
+   stays a build document.
 4. **CHECKPOINT: present the plan, stop, get approval or edits before any code.**
 
 ## Stage 4 — Phased implementation (loop per phase)
