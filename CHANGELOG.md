@@ -5,6 +5,25 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-07-14
+
+### Added
+- **The evidence gate now checks reality, not prose length.** It only ever tested
+  that the `- Evidence:` ledger held ≥15 characters of text — so `"ran tests, all
+  pass"` passed the gate without anything having been run. Two mechanical checks
+  join it in `hooks/evidence_guard.py`, blocking once with every failure listed:
+  - **Verify** — the lint/test commands the project declares in a ```verify```
+    block in `conventions.md` are actually EXECUTED, and the phase is blocked if
+    they fail. `coder` was previously just *asked* to run the linter. Note this
+    executes repo-declared commands, so run the workflow only in a repo you trust.
+  - **Scope** — files changed outside the `- Files:` the phase declared in
+    `plan.md` are flagged. Unplanned edits are unreviewed surface, and scope creep
+    is the main source of accidental complexity.
+  Both are opt-in by data: no ```verify``` block means no command gate, no
+  `- Files:` means no scope gate. Both fail open, and the diff is snapshotted
+  before the commands run so a test run's own build artifacts can't be read back
+  as out-of-scope edits.
+
 ## [0.5.0] - 2026-07-14
 
 ### Added

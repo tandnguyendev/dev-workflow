@@ -24,9 +24,18 @@ workflow to rely on.
    - If a `CLAUDE.md` already exists, read it and reuse its content — do not
      duplicate or overwrite it; complement it.
 2. Draft `conventions.md` using the section structure from the plugin template
-   (Domain / Tech stack / Architecture / Coding conventions / Simplicity contract
-   / Domain-specific correctness rules / Security focus / Workflow files). Fill
-   each section from what you observed; mark anything uncertain as an assumption.
+   (Domain / Tech stack / Architecture / Coding conventions / Verify commands /
+   Simplicity contract / Domain-specific correctness rules / Security focus /
+   Workflow files). Fill each section from what you observed; mark anything
+   uncertain as an assumption.
+   **The `verify` block is the one that carries teeth**: the pre-approval gate
+   RUNS those commands and blocks the phase if they fail. Put the EXACT lint and
+   test commands there, verified against the project's own config (the script in
+   `package.json`, the `Makefile` target, the `pyproject.toml` tool section) —
+   not a guess. Drop a line the project genuinely doesn't have rather than
+   inventing one; leave the placeholder in place if you cannot determine it, and
+   say so — a placeholder is never executed. Prefer a fast command: a phase waits
+   on it.
    Copy the **Simplicity contract** section verbatim from the template in BOTH
    paths (observed project conventions and greenfield default) — it is a standing
    constraint, not a fallback baseline. Never rephrase, soften, or drop it.

@@ -26,7 +26,15 @@ While coding:
 - Follow `conventions.md` and any domain-specific correctness rules; match the
   surrounding code's style, naming, and idioms. Keep the change minimal and
   scoped to this phase.
-- Run the project's formatter/linter if one is configured and fix what it flags.
+- Run the project's formatter/linter and tests — the exact commands are in the
+  `verify` block of `conventions.md`. A Stop hook runs them itself before the user
+  is asked to approve and blocks the phase if they fail, so there is nothing to be
+  gained by skipping them or by reporting a pass you didn't get. Fix the code when
+  they fail; never edit the commands to make them pass.
+- Stay inside the phase's declared `Files:` from `plan.md`. The same hook flags
+  files you touched that the phase never planned to touch — an unplanned edit is
+  unreviewed surface. If a file genuinely belongs to this phase, say so and have
+  the plan updated rather than editing it quietly.
 - Apply the clean-code baseline in every project, not just greenfield. On a
   genuine conflict, precedence is: linter/formatter > `conventions.md` >
   surrounding style > baseline; absent a conflict the baseline holds. Baseline:

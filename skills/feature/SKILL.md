@@ -137,8 +137,13 @@ For each phase in `plan.md`, in order:
    - If reviewers found issues, have `coder` fix them, then re-review.
    - **Fill the phase's `- Evidence:` ledger** with CITED proof it works:
      test/command output, `file:line` refs, concrete cases verified — one artifact
-     per acceptance criterion, no "looks fine". (A `Stop`-hook evidence gate nudges
-     you if you yield for approval with an empty ledger.)
+     per acceptance criterion, no "looks fine".
+   A `Stop`-hook pre-approval gate independently checks all three before you can
+   yield: the ledger is filled, the `verify` commands from `conventions.md` actually
+   pass (it RUNS them — a claimed pass you didn't get will be caught), and the changed
+   files stay inside the phase's declared `Files:` in `plan.md`. If it blocks, fix the
+   code or the plan — never the commands, and never by widening `Files:` to cover an
+   edit the phase didn't need.
 4. **CHECKPOINT: the user reviews AFTER the AI. Stop and wait.** On approval, mark
    the phase APPROVED in `phase-log.md` and move on. Never advance unapproved.
 5. If it's a git repo and the user wants per-phase commits, commit scoped to this
