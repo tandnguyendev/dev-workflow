@@ -26,6 +26,11 @@ codebase's established style.
 - Handle errors explicitly; fail loudly on invalid input, never swallow silently.
 - No dead code, commented-out blocks, or unused symbols.
 - Keep public surfaces small; expose the minimum needed.
-- Comments explain WHY, not WHAT; keep them accurate or delete them.
+- Comment only what the code cannot say itself — a constraint, a non-obvious
+  reason, a caveat. Never narrate the next line, explain where a change came
+  from, or argue that it is correct: that is talk for the reviewer, and it is
+  noise the moment the PR merges. Match the surrounding code's comment density;
+  don't docstring every function in a file that has none. Keep them accurate or
+  delete them.
 - Let the formatter own whitespace/quotes/semicolons — don't hand-format.
 - Tests cover the new behavior plus at least one edge/failure case.

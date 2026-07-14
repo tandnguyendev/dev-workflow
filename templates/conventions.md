@@ -43,6 +43,8 @@ fallback. It applies on top of the conventions above, in every project.*
 - Match existing patterns; don't add libraries or layers the codebase doesn't
   already use.
 - Handle only errors that can actually occur here.
+- Comment only what the code can't say itself; never narrate the change or
+  justify it to the reviewer. Match the file's existing comment density.
 - Before adding anything beyond the literal request, STOP and ask — default to less.
 
 ## Domain-specific correctness rules

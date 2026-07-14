@@ -22,6 +22,10 @@ Focus on:
   conflict.
 - Error handling and failure states (partial writes, rollback, retries).
 - Unnecessarily complex or duplicated code that could be reused/simplified.
+- Comment noise: comments that narrate what the next line does, explain where the
+  change came from, or argue to you that it's correct; docstrings added to a file
+  whose existing functions have none. Flag them for deletion — they read as
+  reviewer-facing commentary and go stale the moment the PR merges.
 
 Return (your final message IS the returned data):
 - Findings by severity, each with file:line and a suggested fix.

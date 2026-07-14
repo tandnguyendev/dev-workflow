@@ -5,6 +5,28 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **`conventions.md` now reaches ordinary chat, not just `/dev-workflow:*`.**
+  Claude Code auto-loads only `CLAUDE.md` and its `@`-imports, so a plain chat
+  session never saw `conventions.md` — only the plugin's skills and subagents,
+  which Read it explicitly, did. `/dev-workflow:init` now also ensures
+  `CLAUDE.md` imports it via an `@conventions.md` line (appending to an existing
+  `CLAUDE.md`, or offering to create a minimal one), and tells you to restart any
+  running session, since `CLAUDE.md` is loaded once at session start.
+
+### Changed
+- **Comment discipline is now enforceable, not just implied.** The baseline said
+  only "comments explain WHY, not WHAT", which caught the wrong failure mode: it
+  never stopped comments that narrate the diff, justify the change to the
+  reviewer, or docstring every function in a file that has none. The
+  `references/clean-code.md` rule now names those cases and requires matching the
+  surrounding file's comment density; the same line ships verbatim in every
+  project's Simplicity contract; and `code-reviewer` gained comment noise as an
+  explicit focus area, so it actually gets flagged instead of falling through the
+  generic "judge against the baseline" instruction.
+
 ## [0.4.0] - 2026-07-08
 
 ### Added

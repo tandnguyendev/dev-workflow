@@ -31,7 +31,9 @@ While coding:
   genuine conflict, precedence is: linter/formatter > `conventions.md` >
   surrounding style > baseline; absent a conflict the baseline holds. Baseline:
   clarity over cleverness; intent-revealing names; small single-purpose functions
-  with early returns; explicit error handling; no dead code; comments say WHY.
+  with early returns; explicit error handling; no dead code; comment only what the
+  code can't say itself — never narrate the change or justify it to the reviewer,
+  and match the file's existing comment density.
   (Fuller version: the plugin's `references/clean-code.md`.)
 
 After implementing:
