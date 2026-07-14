@@ -1,6 +1,6 @@
 ---
 name: init
-description: Inspect the current project and draft conventions.md — its domain, tech stack, architecture, coding conventions, and security focus — so the feature workflow has accurate project context. Read-heavy; writes only conventions.md after user review.
+description: Inspect the current project and draft conventions.md — its domain, tech stack, architecture, coding conventions, and security focus — so the feature workflow has accurate project context. Read-heavy; after user review, writes conventions.md and imports it from CLAUDE.md.
 ---
 
 # Init — learn this project, draft conventions.md
@@ -32,7 +32,29 @@ workflow to rely on.
    constraint, not a fallback baseline. Never rephrase, soften, or drop it.
 3. **CHECKPOINT: show the draft to the user and ask them to confirm or correct
    it before writing.** Only write `conventions.md` after they approve.
-4. After writing, point the user to **model routing** (optional, one line each) so
+4. Make `conventions.md` visible to ordinary chat, not just this plugin. The
+   plugin's own skills and subagents Read it directly, but a plain Claude Code
+   session only auto-loads `CLAUDE.md` and the files it `@`-imports — so without
+   an import line, everything you wrote is invisible outside `/dev-workflow:*`.
+   After writing `conventions.md`, ensure `CLAUDE.md` at the project root imports
+   it on its own line:
+
+   ```markdown
+   @conventions.md
+   ```
+
+   - If `CLAUDE.md` exists and already imports it, leave the file alone.
+   - If `CLAUDE.md` exists without the import, append the line (plus a one-line
+     lead-in such as `Project domain and conventions:`) — do not touch anything
+     else in the file.
+   - If there is no `CLAUDE.md`, ask the user whether to create a minimal one
+     holding just that import. If they decline, tell them plain chat sessions
+     won't see `conventions.md` and move on.
+
+   Then tell the user that a session already running must be restarted to pick
+   the import up — `CLAUDE.md` is loaded once at session start, not re-read each
+   turn. (Subagents Read the file live, so they always see the latest.)
+5. After writing, point the user to **model routing** (optional, one line each) so
    they can tune cost/quality before running a feature:
    - **Per-agent (recommended):** copy the plugin's `templates/models.json` to
      `.dev-workflow/models.json` and map any of the seven agents
@@ -43,12 +65,13 @@ workflow to rely on.
    - **All agents at once:** set `CLAUDE_CODE_SUBAGENT_MODEL=<model>` before launching.
    - **Replace an agent entirely:** add `.claude/agents/<name>.md` to shadow the
      plugin's (changes the prompt too, not just the model).
-   Mention it and move on — do NOT create `models.json` yourself; init writes only
-   `conventions.md`.
+   Mention it and move on — do NOT create `models.json` yourself; init writes
+   `conventions.md` and the `CLAUDE.md` import line, nothing else.
 
 ## Rules
 - Be concrete and specific to THIS project — no generic filler.
-- Do not modify source code. The only file you create/update is `conventions.md`.
+- Do not modify source code. The only files you create/update are
+  `conventions.md` and — for the import line alone — `CLAUDE.md`.
 - The clean-code baseline (`references/clean-code.md`) applies to EVERY project,
   not just greenfield — the coder and reviewer enforce it always, subordinate to
   the project's own linter/conventions/style on a genuine conflict. So the Coding

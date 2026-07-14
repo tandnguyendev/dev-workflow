@@ -40,7 +40,7 @@ Working docs scaffold automatically under `.dev-workflow/features/<slug>/`; mult
 
 | Command | Purpose |
 |---------|---------|
-| `/dev-workflow:init` | Inspect the project, draft `conventions.md` |
+| `/dev-workflow:init` | Inspect the project, draft `conventions.md`, import it from `CLAUDE.md` |
 | `/dev-workflow:feature` | Drive the whole feature workflow (orchestrator) |
 | `/dev-workflow:status` | Readout of the active feature / phase / gate |
 | `/dev-workflow:checkpoints` | List auto-snapshots |
@@ -130,7 +130,7 @@ A `Stop` hook (`hooks/evidence_guard.py`) enforces it: end a turn with the curre
 - **Token triage** — the `feature` skill sizes each job (trivial / standard / complex) and scales the machinery: trivial skips research + the option panel and uses one reviewer; complex runs the full 3-agent panel, both reviewers per phase, and a full final audit.
 - **Token discipline across phases** — the fresh-context re-reads that make multi-phase workflows expensive are attacked directly: **one `coder` is reused across a feature's phases** (continued, not respawned) so codebase intake is paid once, not per phase; the orchestrator hands coder and reviewers the **exact files/paths** from `plan.md` so they Read the spot instead of Grep-walking to find it; and `conventions.md` is kept lean because every subagent re-reads it in full. Reviewers stay freshly spawned per phase on purpose — objective fresh eyes are the point. (An MCP can *store* shared context but can't avoid this cost: each subagent still pulls it into its own window.)
 - **Optional: semantic code retrieval** — on large codebases, a symbol-level retrieval MCP (e.g. [Serena](https://github.com/oraios/serena)) lets agents read *symbols* rather than whole files, shrinking read size. It's an opt-in per-project MCP, not bundled — add it to your own `.mcp.json` if the codebase is big enough to warrant it.
-- **Domain context** ships per-project via `conventions.md` (plugins can't ship a project `CLAUDE.md`). Greenfield code with no stated convention falls back to a minimal, subordinate `references/clean-code.md` baseline — the project's own linter always wins.
+- **Domain context** ships per-project via `conventions.md` (plugins can't ship a project `CLAUDE.md`). The plugin's skills and subagents Read it directly; `init` also adds an `@conventions.md` import to your `CLAUDE.md` so plain chat sessions — not just `/dev-workflow:*` — carry the same project context. Greenfield code with no stated convention falls back to a minimal, subordinate `references/clean-code.md` baseline — the project's own linter always wins.
 
 ## Requirements
 
