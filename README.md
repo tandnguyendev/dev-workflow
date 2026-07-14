@@ -22,7 +22,12 @@ The domain isn't hardcoded — it's read from your `conventions.md` (via `/dev-w
 /plugin install dev-workflow@dev-workflow-marketplace
 ```
 
-> Update later: `/plugin marketplace update dev-workflow-marketplace` — see the [changelog](CHANGELOG.md) for what's new.
+> Update later (two steps — refresh the catalog, then pull the new code):
+> ```shell
+> /plugin marketplace update dev-workflow-marketplace
+> /plugin update dev-workflow@dev-workflow-marketplace
+> ```
+> See the [changelog](CHANGELOG.md) for what's new.
 
 ## Quick start
 

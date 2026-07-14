@@ -51,7 +51,12 @@ carry red-first tests. No behavior a correct 0.6.1 workflow relied on is removed
   template now state which literal strings the hooks read, who ticks each, and when —
   and that `coder` must never tick a review box or `USER APPROVED`.
 
-**Updating:** `/plugin marketplace update dev-workflow-marketplace` to pull 0.6.2.
+**Updating** takes two steps — the first refreshes the catalog, the second pulls the
+new code (the catalog refresh alone leaves your installed copy on 0.6.1):
+```
+/plugin marketplace update dev-workflow-marketplace
+/plugin update dev-workflow@dev-workflow-marketplace
+```
 
 ## [0.6.1] - 2026-07-14
 
