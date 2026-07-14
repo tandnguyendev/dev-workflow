@@ -5,6 +5,54 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-07-14
+
+Closes an independent audit of 0.6.1. Every finding was reproduced by running the
+hooks (not by reading them) and each fix was reviewed by a fresh agent; the fixes
+carry red-first tests. No behavior a correct 0.6.1 workflow relied on is removed.
+
+### Fixed
+- **The approval gate now blocks Bash while `LOCKED`.** `coder` has Bash, and a
+  here-doc / `sed -i` / `python -c` wrote source behind the lock — the gate only
+  covered the edit tools. A denylist of write constructs cannot be closed, so while
+  `LOCKED` **all** Bash is denied (the coder runs tests/lint while `UNLOCKED`). Shell
+  quoting like `.approval-gat"e"` can no longer smuggle the gate file past the check.
+- **`rollback` no longer destroys `.dev-workflow/`.** A repo that commits its workflow
+  docs lost its phase log — and the Evidence ledger written that phase — because
+  `git read-tree --reset` deletes tracked paths absent from the snapshot, and
+  snapshots exclude `.dev-workflow/`. It is now preserved across a rollback exactly as
+  `.approval-gate` already was; `undo` recovers cleanly.
+- **The evidence gate blocks more than once.** It trusted `stop_hook_active`, so
+  block once → change nothing → stop again let an empty ledger through. It now refuses
+  up to three times per phase, then yields **loudly** (never silently) so it can't trap
+  a turn. The give-up bound survives a read-only `.dev-workflow/`, and the counter is
+  per phase so concurrent features don't reset each other.
+- **`## Final Review` (any capitalization) is parsed as a section.** The heading match
+  was case-sensitive, so a capital `R` absorbed the section into the phase above it and
+  marked the wrong phase approved. `USER APPROVED` stays case-sensitive on purpose, so
+  incidental lowercase prose can't wave an unproven phase through.
+- **Evidence written as sub-bullets counts.** The empty-ledger check mistook the
+  ledger's own indented bullets for its terminator, so real cited proof read as empty.
+- **Hooks invoke `python3`, not `python`.** On a stock Linux/macOS box there is no
+  `python`, so every hook silently failed to launch — no gate, no checkpoints, no
+  evidence gate. The plugin validator now fails if a hook ever names `python` again.
+- The per-phase security scan is stated honestly as **surface-gated** (auth, input
+  handling, crypto/secrets, data access, external I/O), not tier-gated; the README,
+  `plugin.json`, and flow diagram no longer claim "security review at every step". The
+  evidence gate is described as raising a floor, not verifying that the proof is true.
+- The `code-reviewer` now carries the clean-code baseline inline instead of pointing at
+  a plugin-relative path it cannot open from the user's project, so it and `coder`
+  enforce the same baseline.
+- `rollback`'s `undo` is no longer pre-approved in `allowed-tools` — it is itself a
+  rollback that rewrites the working tree, so it gets the same confirmation.
+
+### Changed
+- The phase-log checkboxes are machine-parsed, so the feature skill, `coder`, and the
+  template now state which literal strings the hooks read, who ticks each, and when —
+  and that `coder` must never tick a review box or `USER APPROVED`.
+
+**Updating:** `/plugin marketplace update dev-workflow-marketplace` to pull 0.6.2.
+
 ## [0.6.1] - 2026-07-14
 
 ### Removed
