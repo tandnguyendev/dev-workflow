@@ -5,37 +5,33 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.0] - 2026-07-14
+## [0.6.1] - 2026-07-14
 
-### Changed
-- **`plan.md`'s `Files:` is now a real path list, because the gate reads it.** Plans
-  were ending phases with a category ("specs") instead of paths, which makes the
-  phase's own spec file look like scope creep to the new gate. It must now name every
-  path the phase may touch, test/spec files included, and anchor to the SYMBOL rather
-  than a line range — earlier phases shift line numbers, and a stale range misdirects
-  the coder with full confidence. `plan-reviewer` flags violations.
-- **Plans are written for the coder, not the reviewer.** Folded-in review findings
-  were carrying their provenance into the plan ("plan review flagged...", "as
-  confirmed above") — the same failure as a code comment addressed to the reviewer.
-  The constraint goes in the plan; what changed and why goes in the message to the
-  user. `plan-reviewer` now phrases each fix as the constraint to write down.
+### Removed
+- **0.6.0 is withdrawn. This release reverts it to 0.5.0's behavior.** Do not run
+  0.6.0. It added a Stop-hook "verify" check that executed the lint/test commands
+  declared in the project's `conventions.md`, plus a "scope" check comparing the
+  changed files against `plan.md`'s `- Files:`. An audit found three defects, two
+  of them serious:
+  - **Privilege escalation.** `hooks/gate.py` deliberately keeps `conventions.md`
+    writable by the model even while the approval gate says `LOCKED`. The verify
+    check shell-executed that same file's ```verify``` block — so the model could
+    write `test: echo UNLOCKED > .approval-gate` and have another hook unlock the
+    approval gate for it, with no tool call and no permission prompt. The same path
+    gave arbitrary command execution outside Bash permissioning. The gate that only
+    the user is supposed to be able to flip was flippable by the model.
+  - **False blocks from Phase 2 onward.** The scope check diffed against `HEAD`,
+    which is cumulative since the last commit — and per-phase commits are optional.
+    So a phase that touched exactly the files it declared was still blocked over the
+    previous, already-approved phase's uncommitted files, and the block message told
+    the orchestrator to revert them. The test suite asserted this behavior as correct.
+  - `lstrip("./")` is a character-set strip, so any dotfile declared in `- Files:`
+    (`.github/workflows/ci.yml`, `.eslintrc.json`) lost its leading dot and was
+    reported as scope creep.
 
-### Added
-- **The evidence gate now checks reality, not prose length.** It only ever tested
-  that the `- Evidence:` ledger held ≥15 characters of text — so `"ran tests, all
-  pass"` passed the gate without anything having been run. Two mechanical checks
-  join it in `hooks/evidence_guard.py`, blocking once with every failure listed:
-  - **Verify** — the lint/test commands the project declares in a ```verify```
-    block in `conventions.md` are actually EXECUTED, and the phase is blocked if
-    they fail. `coder` was previously just *asked* to run the linter. Note this
-    executes repo-declared commands, so run the workflow only in a repo you trust.
-  - **Scope** — files changed outside the `- Files:` the phase declared in
-    `plan.md` are flagged. Unplanned edits are unreviewed surface, and scope creep
-    is the main source of accidental complexity.
-  Both are opt-in by data: no ```verify``` block means no command gate, no
-  `- Files:` means no scope gate. Both fail open, and the diff is snapshotted
-  before the commands run so a test run's own build artifacts can't be read back
-  as out-of-scope edits.
+  A verify gate is still the right idea — the evidence ledger is only a length check,
+  so "ran tests, all pass" passes it today without anything having run. It will
+  return reading its commands from a file the model cannot write.
 
 ## [0.5.0] - 2026-07-14
 

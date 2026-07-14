@@ -28,19 +28,10 @@ Attack the plan on these axes:
 - **Evidence & rollback**: does each phase name what would prove it done, and a
   safe rollback point? Flag phases that can't be checkpointed or reverted.
 - **Scope drift**: phases that exceed or contradict the chosen option in `spec.md`.
-- **`Files:` usability**: it is enforced, not decorative — the pre-approval gate
-  flags changed files that no phase declared. Flag any `Files:` line that names a
-  category instead of a path ("specs", "tests"), omits the test/spec files the
-  phase must write, or anchors to a line range rather than a symbol (earlier phases
-  shift line numbers; a stale range misdirects the coder).
 
 Return (your final message IS the returned data, not a greeting):
 - A list of findings, most severe first, each tied to a specific phase and a
   concrete fix (split / reorder / add phase / add evidence / add rollback).
-- Phrase each fix as the CONSTRAINT to write into the plan, not as a note about
-  your review — the orchestrator folds your words into a document the coder reads,
-  and "plan review flagged X" is noise to that reader. Say "sells store usdt_in='0'
-  (truthy) — select the field by side", not "as I found above, the || is wrong".
 - For each finding, cite what you checked — the phase and the file/spec section
   that grounds the concern (e.g. "Phase 2 edits auth.py:40 but the token schema
   it needs is only added in Phase 4").

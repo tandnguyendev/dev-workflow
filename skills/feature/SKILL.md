@@ -93,23 +93,11 @@ and let `domain-researcher` infer the domain from the description + code.
      with no way to verify it is a planning bug.
    - **Each phase has a rollback point.** Note where the checkpoint sits so a bad
      phase can be reverted cleanly (ties into the checkpoint/rollback machinery).
-   - **`Files:` is a real path list, and it is load-bearing.** Every file the phase
-     may touch — new files and test/spec files included — as an actual path. The
-     pre-approval gate flags changed files that aren't listed, so "specs" or "tests"
-     as a placeholder makes the phase's own spec file look like scope creep. Anchor
-     to the symbol (`updateParams`), never a line range: earlier phases shift line
-     numbers and a stale range misdirects the coder with full confidence.
-   - **Write for the coder, not the reviewer.** State each constraint; never record
-     its provenance ("plan review flagged", "as confirmed above"). A phase earns its
-     length with traps the coder would otherwise fall into and with work it can now
-     skip — not with the story of how the plan got fixed.
 3. **Adversarial plan review** (standard + complex tiers; SKIP for trivial): spawn
    the `plan-reviewer` subagent on the drafted `plan.md`. It hunts for missing
    phases, hidden dependencies, oversized/untestable phases, ordering mistakes, and
    rollback gaps. Fold its findings into `plan.md` (resequence, split, or add
-   phases) before showing the user — fold in the CONSTRAINT, not the fact that a
-   reviewer found it. Tell the USER what changed in your message; the plan itself
-   stays a build document.
+   phases) before showing the user — note what changed.
 4. **CHECKPOINT: present the plan, stop, get approval or edits before any code.**
 
 ## Stage 4 — Phased implementation (loop per phase)
@@ -149,13 +137,8 @@ For each phase in `plan.md`, in order:
    - If reviewers found issues, have `coder` fix them, then re-review.
    - **Fill the phase's `- Evidence:` ledger** with CITED proof it works:
      test/command output, `file:line` refs, concrete cases verified — one artifact
-     per acceptance criterion, no "looks fine".
-   A `Stop`-hook pre-approval gate independently checks all three before you can
-   yield: the ledger is filled, the `verify` commands from `conventions.md` actually
-   pass (it RUNS them — a claimed pass you didn't get will be caught), and the changed
-   files stay inside the phase's declared `Files:` in `plan.md`. If it blocks, fix the
-   code or the plan — never the commands, and never by widening `Files:` to cover an
-   edit the phase didn't need.
+     per acceptance criterion, no "looks fine". (A `Stop`-hook evidence gate nudges
+     you if you yield for approval with an empty ledger.)
 4. **CHECKPOINT: the user reviews AFTER the AI. Stop and wait.** On approval, mark
    the phase APPROVED in `phase-log.md` and move on. Never advance unapproved.
 5. If it's a git repo and the user wants per-phase commits, commit scoped to this

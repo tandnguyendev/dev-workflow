@@ -110,17 +110,11 @@ Rollback restores tracked *content*; files created since are left in place (they
 </details>
 
 <details>
-<summary><b>🧾 Pre-approval gate</b> — evidence · verify · scope</summary>
+<summary><b>🧾 Evidence gate</b> — how it works</summary>
 
-<br>Prose rules in an agent prompt are a request, not a guarantee. Before a phase can be put in front of you for approval, a `Stop` hook (`hooks/evidence_guard.py`) checks the three things that *can* be checked mechanically — and blocks **once**, listing every failure at that stop:
+<br>Completion checkpoints ask for *cited proof*. Each phase's `phase-log.md` has an `- Evidence:` ledger to fill with concrete artifacts — test/command output, `file:line` references, the cases verified — one per acceptance criterion. Review subagents back every verdict with what they actually checked.
 
-- **Evidence** — the phase's `- Evidence:` ledger in `phase-log.md` carries cited proof: test/command output, `file:line` refs, the cases verified, one per acceptance criterion.
-- **Verify** — the lint/test commands the project declared in its `conventions.md` ```verify``` block are **actually run**, and must pass. This is what makes the evidence real: without it, writing *"ran the tests, all pass"* into the ledger satisfies the evidence check while nothing was ever run.
-- **Scope** — the files actually changed stay inside the `- Files:` the phase declared in `plan.md`. An unplanned edit is unreviewed surface, and scope creep is the main source of accidental complexity.
-
-Fail-open, honors `stop_hook_active` (so it can never hard-lock a turn), silent unless a phase-log is active. Each check is opt-in by data: no ```verify``` block → no command gate; no `- Files:` → no scope gate.
-
-> **Trust note:** the verify check *executes* the commands your `conventions.md` declares, in your project directory — that is the whole point, since the alternative is taking the coder's word for it. It also means you should run this workflow only in a repository you trust, the same as `npm test` or `make`.
+A `Stop` hook (`hooks/evidence_guard.py`) enforces it: end a turn with the current phase marked reviewed but its Evidence ledger empty, and it blocks **once** to ask for proof. Fail-open, honors `stop_hook_active` (so it can never hard-lock a turn), silent unless a phase-log is active.
 </details>
 
 <details>

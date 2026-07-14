@@ -28,19 +28,10 @@ open only when a task needs them. (This note stays; the guidance blockquotes go.
 
 ## Coding conventions
 > Style, naming, error-handling patterns, testing approach, things reviewers
-> should enforce. Objective tooling beats prose — put the commands in the block
-> below; keep this section for what tooling can't check.
+> should enforce. Name the linter/formatter and the EXACT command to run them
+> (e.g. `ruff check` / `npm run lint` / `gofmt -l`) and the test command — the
+> coder runs these and the reviewer enforces them. Objective tooling beats prose.
 > (Greenfield with no conventions yet? Start from `references/clean-code.md`.)
-
-## Verify commands
-The pre-approval gate RUNS these and blocks the phase if they fail — so they are
-enforcement, not documentation. Keep them exact and fast (a phase is gated on
-them). Delete a line you don't have; an empty block gates nothing.
-
-```verify
-lint: <exact command, e.g. ruff check . / npm run lint / gofmt -l .>
-test: <exact command, e.g. pytest -q / npm test / go test ./...>
-```
 
 ## Simplicity contract (always applies)
 *This section stays verbatim — it is not project-specific and is not a
