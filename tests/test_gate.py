@@ -83,6 +83,28 @@ def test_bash_touching_gate_is_denied_through_shell_quoting(tmp_path):
         assert denied(run_hook("gate.py", bash(cmd), project_dir=tmp_path)), cmd
 
 
+def test_bash_touching_gate_is_denied_through_globbing(tmp_path):
+    # Quoting is not the only way the shell names a file without spelling it: a
+    # GLOB expands after our string check, so `rm .approval-gat?` and
+    # `echo UNLOCKED > .approval*` hit the gate while containing no substring of
+    # its name. Unlocked, that let the model delete its own gate.
+    lock(tmp_path, "UNLOCKED\n")
+    for cmd in ("rm .approval-gat?",
+                "echo UNLOCKED > .approval*",
+                "rm ./.approval-g[a]te",
+                "rm .app*gate"):
+        assert denied(run_hook("gate.py", bash(cmd), project_dir=tmp_path)), cmd
+
+
+def test_globs_that_cannot_match_a_dotfile_are_allowed(tmp_path):
+    # In the shell a glob whose first character is not a literal dot never expands
+    # to a dotfile, so `rm *.pyc` cannot touch the gate — denying everyday globs
+    # would make the guard cry wolf on half the coder's commands.
+    lock(tmp_path, "UNLOCKED\n")
+    for cmd in ("rm -f *.pyc", "ls *", "grep -r pattern *.py"):
+        assert hook_json(run_hook("gate.py", bash(cmd), project_dir=tmp_path)) is None, cmd
+
+
 def test_locked_denies_bash_writing_source(tmp_path):
     # THE escape: gate.py returned early for Bash, so the LOCKED source-edit block
     # was never reached — and `coder` has Bash. A here-doc, `sed -i`, `patch` or
@@ -113,6 +135,34 @@ def test_unlocked_allows_bash(tmp_path):
 def test_no_gate_file_allows_bash(tmp_path):
     # The gate is opt-in; with no gate file the hook must not touch anything.
     assert hook_json(run_hook("gate.py", bash("pytest -q"), project_dir=tmp_path)) is None
+
+
+def notebook_edit(path):
+    return {"tool_name": "NotebookEdit", "tool_input": {"notebook_path": str(path)}}
+
+
+def test_locked_denies_notebook_edit(tmp_path):
+    # NotebookEdit writes source like Edit but addresses the file as
+    # `notebook_path`, and hooks.json never routed it here at all — so while the
+    # gate said LOCKED, a phase could still advance through an .ipynb file.
+    lock(tmp_path)
+    assert denied(run_hook("gate.py", notebook_edit(tmp_path / "analysis.ipynb"),
+                           project_dir=tmp_path))
+
+
+def test_locked_allows_notebook_in_state_dir(tmp_path):
+    # The working-doc carve-out must read `notebook_path` too, or a notebook under
+    # `.dev-workflow/` would be blocked while every other working doc stays open.
+    lock(tmp_path)
+    nb = tmp_path / ".dev-workflow" / "features" / "x" / "scratch.ipynb"
+    assert hook_json(run_hook("gate.py", notebook_edit(nb), project_dir=tmp_path)) is None
+
+
+def test_unlocked_allows_notebook_edit(tmp_path):
+    lock(tmp_path, "UNLOCKED\n")
+    proc = run_hook("gate.py", notebook_edit(tmp_path / "analysis.ipynb"),
+                    project_dir=tmp_path)
+    assert hook_json(proc) is None and proc.returncode == 0
 
 
 def test_malformed_stdin_fails_open(tmp_path):

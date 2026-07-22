@@ -2,7 +2,7 @@
 """Checkpoint engine for the dev-workflow plugin.
 
 As a PreToolUse hook (no args, JSON on stdin): before a mutating tool
-(Edit/Write/MultiEdit/Bash) runs, snapshot the working tree to an immutable
+(Edit/Write/MultiEdit/NotebookEdit/Bash) runs, snapshot the working tree to an immutable
 commit on a shadow ref `refs/dev-workflow/checkpoints/<ts>` WITHOUT touching the
 user's index, HEAD, branch, or working tree. Always exits 0 and never denies —
 it is a side-effecting recorder, not a gate. Fails open on any error.
@@ -33,7 +33,7 @@ import tempfile
 import time
 
 REF_PREFIX = "refs/dev-workflow/checkpoints"
-MUTATING_TOOLS = {"Edit", "Write", "MultiEdit", "Bash"}
+MUTATING_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit", "Bash"}
 # Both are kept OUT of checkpoints and preserved live across a rollback: they are
 # the workflow's own memory, not part of the code being rolled back.
 GATE_NAME = ".approval-gate"

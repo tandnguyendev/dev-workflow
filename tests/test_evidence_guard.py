@@ -186,3 +186,23 @@ def test_short_nonempty_evidence_still_blocks(tmp_path):
     # A too-short scrap ("ok") is not real cited proof.
     write_log(tmp_path, phase("Phase 1 - a", reviewed=True, evidence="ok"))
     assert blocked(run_hook("evidence_guard.py", {}, project_dir=tmp_path))
+
+
+def test_evidence_opening_with_angle_bracket_is_not_a_placeholder(tmp_path):
+    # `startswith("<")` treated ANY value opening with `<` as the template blank,
+    # so real evidence like "<200ms p99 measured via wrk" was refused — a false
+    # block at the exact moment the turn tried to yield for approval. Only a value
+    # still ENTIRELY wrapped in `<...>` is the placeholder.
+    write_log(tmp_path, phase("Phase 1 - a", reviewed=True,
+                              evidence="<200ms p99 measured via wrk, results in bench.txt"))
+    proc = run_hook("evidence_guard.py", {}, project_dir=tmp_path)
+    assert hook_json(proc) is None, "false block: real evidence read as placeholder"
+
+
+def test_fully_wrapped_placeholder_still_blocks(tmp_path):
+    # ...and the template's own blank keeps blocking — including the long Evidence
+    # placeholder, whose prose contains a `>` (from `->`) before the closing one.
+    write_log(tmp_path, phase(
+        "Phase 1 - a", reviewed=True,
+        evidence="<cited PROOF this phase works — e.g. `pytest -q` -> 12 passed>"))
+    assert blocked(run_hook("evidence_guard.py", {}, project_dir=tmp_path))

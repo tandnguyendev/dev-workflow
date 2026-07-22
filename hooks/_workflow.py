@@ -99,7 +99,13 @@ def is_unfilled(val, min_len=1):
     # Drop leading bullet dashes so "- `pytest` passed" counts as content.
     val = re.sub(r"^[ \t]*-[ \t]*", "", val, flags=re.MULTILINE)
     val = re.sub(r"\s+", " ", val).strip()
-    if not val or val.startswith("<"):
+    if not val:
+        return True
+    # A placeholder is a value still ENTIRELY wrapped in the template's `<...>`.
+    # Merely OPENING with `<` is not enough: "<200ms p99 measured via wrk" is real
+    # evidence that happens to start with an angle bracket, and treating it as the
+    # blank refused genuine proof at the exact moment the turn tried to end.
+    if val.startswith("<") and val.endswith(">"):
         return True
     return len(val) < min_len
 

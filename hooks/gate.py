@@ -3,7 +3,7 @@
 
 Two protections:
 1. The model may NEVER modify `.approval-gate` itself — not via Edit/Write/
-   MultiEdit, and not via Bash. Only the user changes it from their own shell
+   MultiEdit/NotebookEdit, and not via Bash. Only the user changes it from their own shell
    (`! echo UNLOCKED > .approval-gate`), which is not a Claude tool call and is
    therefore not intercepted.
 2. While `.approval-gate` says LOCKED, block BOTH the edit tools on source files
@@ -34,11 +34,15 @@ Gate states (first non-empty line of `.approval-gate`, case-insensitive):
   UNLOCKED  -> allow
   (absent)  -> allow (the gate is opt-in; create the file to activate it)
 """
+import fnmatch
 import json
 import os
 import re
 import sys
 
+# The tools that write a file at a path this hook can inspect. NotebookEdit is an
+# edit tool like the others — leaving it out routed .ipynb writes past the gate.
+EDIT_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
 # Doc basenames that are always workflow docs, wherever they live.
 WORKING_DOC_NAMES = {"spec.md", "plan.md", "phase-log.md", "conventions.md",
                      "project-map.md"}
@@ -67,6 +71,12 @@ BASH_LOCKED_MSG = (
 # shell but a different string to us (`.approval-gat"e"`), so strip quotes and
 # escapes before matching.
 _SHELL_QUOTES = re.compile(r"""['"\\]""")
+# ...and shell GLOBBING can name the file without ever spelling it: `rm
+# .approval-gat?` and `echo UNLOCKED > .approval*` both hit the gate. Split the
+# command on shell separators and ask fnmatch whether any glob-carrying token
+# would match the gate file.
+_TOKEN_SPLIT = re.compile(r"[\s;|&<>()`]+")
+_GLOB_CHARS = re.compile(r"[*?\[]")
 
 
 def deny(reason):
@@ -85,7 +95,24 @@ def bash_touches_gate(command):
     # blocked — the model has no legitimate need to touch the gate via Bash. Match
     # the raw command AND a quote-stripped form, so the shell's own quoting cannot
     # smuggle the name past a plain substring test.
-    return GATE_NAME in command or GATE_NAME in _SHELL_QUOTES.sub("", command)
+    stripped = _SHELL_QUOTES.sub("", command)
+    if GATE_NAME in command or GATE_NAME in stripped:
+        return True
+    # Glob patterns that would expand to the gate file. Only a pattern whose first
+    # character is a literal dot can match a dotfile in the shell, so `rm *.pyc`
+    # or `ls *` cannot touch the gate and must not be denied for it.
+    for tok in _TOKEN_SPLIT.split(stripped):
+        name = os.path.basename(tok)
+        if (name.startswith(".") and _GLOB_CHARS.search(name)
+                and fnmatch.fnmatch(GATE_NAME, name)):
+            return True
+    return False
+
+
+def target_path(tool_input):
+    """The file an edit-tool call writes: `file_path` for Edit/Write/MultiEdit,
+    `notebook_path` for NotebookEdit."""
+    return tool_input.get("file_path") or tool_input.get("notebook_path") or ""
 
 
 def is_working_doc(fp, project_dir):
@@ -111,8 +138,8 @@ def main():
     tool_input = payload.get("tool_input") or {}
 
     # --- Protection 1: the model may never modify the gate file. ---
-    if tool in ("Edit", "Write", "MultiEdit"):
-        fp = tool_input.get("file_path", "")
+    if tool in EDIT_TOOLS:
+        fp = target_path(tool_input)
         if fp and os.path.basename(fp) == GATE_NAME:
             deny(GATE_EDIT_MSG)
     elif tool == "Bash":
@@ -145,7 +172,7 @@ def main():
         deny(BASH_LOCKED_MSG)
 
     # Locked: still allow workflow docs so the log can be updated.
-    if is_working_doc(tool_input.get("file_path", ""), project_dir):
+    if is_working_doc(target_path(tool_input), project_dir):
         sys.exit(0)
 
     deny(

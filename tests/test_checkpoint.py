@@ -107,6 +107,17 @@ def test_hook_mode_snapshots_on_mutating_tool(git_repo):
     assert "dev-workflow/checkpoints" in cp(git_repo, "list").stdout
 
 
+def test_hook_mode_snapshots_on_notebook_edit(git_repo):
+    # NotebookEdit mutates files like Edit but was missing from MUTATING_TOOLS
+    # (and from hooks.json's matcher), so notebook edits got no pre-edit snapshot
+    # — the one tool whose changes rollback could not recover.
+    (git_repo / "a.txt").write_text("two\n")
+    proc = run_hook("checkpoint.py", {"tool_name": "NotebookEdit", "cwd": str(git_repo)},
+                    project_dir=git_repo)
+    assert proc.returncode == 0
+    assert "dev-workflow/checkpoints" in cp(git_repo, "list").stdout
+
+
 def test_hook_mode_ignores_non_mutating_tool(git_repo):
     run_hook("checkpoint.py", {"tool_name": "Read", "cwd": str(git_repo)}, project_dir=git_repo)
     assert "no checkpoints" in cp(git_repo, "list").stdout.lower()

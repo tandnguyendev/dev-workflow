@@ -85,16 +85,16 @@ Five hooks make the workflow *trustworthy*, not just well-behaved. All fail open
 | 📏 **Plan guard** | Extra phases and blown review budgets must be justified in writing, not chosen silently |
 | ♻️ **Context re-injection** | Workflow state survives `/compact` |
 
-Four of the five stay silent when no workflow is active. **Checkpoints are the exception**: in any git repo, the checkpoint hook snapshots before every `Edit`/`Write`/`MultiEdit`/`Bash` whether or not a dev-workflow feature is running. It writes only to its own shadow refs — never your index, HEAD, branch, or worktree — but it is not side-effect-free, and the refs are not pruned automatically (see the v1 limits below).
+Four of the five stay silent when no workflow is active. **Checkpoints are the exception**: in any git repo, the checkpoint hook snapshots before every `Edit`/`Write`/`MultiEdit`/`NotebookEdit`/`Bash` whether or not a dev-workflow feature is running. It writes only to its own shadow refs — never your index, HEAD, branch, or worktree — but it is not side-effect-free, and the refs are not pruned automatically (see the v1 limits below).
 
 <details>
 <summary><b>🔒 Approval gate</b> — how it works</summary>
 
-<br>A `PreToolUse` hook (`hooks/gate.py`) blocks `Edit`/`Write`/`MultiEdit` on source code **and all of `Bash`** while a `.approval-gate` file at your project root says `LOCKED`. Opt-in — does nothing until the file exists.
+<br>A `PreToolUse` hook (`hooks/gate.py`) blocks `Edit`/`Write`/`MultiEdit`/`NotebookEdit` on source code **and all of `Bash`** while a `.approval-gate` file at your project root says `LOCKED`. Opt-in — does nothing until the file exists.
 
 - Working docs (`spec.md`, `plan.md`, `phase-log.md`, `conventions.md`, anything under `.dev-workflow/`) stay editable while locked, so the log can still be maintained.
 - **Bash is denied outright while locked** — not filtered. `coder` has Bash, and a denylist of write constructs cannot be closed: `sed -i`, here-docs, `patch`, `git checkout` and any interpreter with `-c` all write files. Rather than pretend to catch them, the gate runs none of them. This costs nothing, because `LOCKED` means *"stop, the phase is waiting on you"* — the coder runs its tests and lint while unlocked.
-- **Only you can unlock**, from your own shell — Claude can't. The edit tools can't write `.approval-gate`, and Bash referring to it is refused (quoting like `.approval-gat"e"` is caught too — though the Bash filename check is best-effort, not a hard barrier; what makes the lock hold is that **no** Bash runs while locked). A rollback can't flip it either: gate state is preserved and never snapshotted.
+- **Only you can unlock**, from your own shell — Claude can't. The edit tools can't write `.approval-gate`, and Bash referring to it is refused (quoting like `.approval-gat"e"` and globs like `rm .approval*` are caught too — though the Bash filename check is best-effort, not a hard barrier; what makes the lock hold is that **no** Bash runs while locked). A rollback can't flip it either: gate state is preserved and never snapshotted.
 
 ```shell
 ! echo LOCKED > .approval-gate      # activate + lock
