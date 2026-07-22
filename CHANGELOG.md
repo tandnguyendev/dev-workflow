@@ -5,6 +5,59 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-07-22
+
+Two gaps that showed up in real runs: agents that didn't know what the project
+already contained, and a review loop with no way to end.
+
+### Added
+- **`project-map.md` — the project's own knowledge file.** `conventions.md` says
+  how code is written here; the map says what already EXISTS and where: module map,
+  shipped features, shared building blocks, extension points, known gotchas,
+  glossary. `/dev-workflow:init` drafts it alongside `conventions.md` (both go to
+  the user for confirmation), `domain-researcher` verifies it against the code and
+  reports stale entries — **the code wins when they disagree** — and Stage 5 appends
+  each shipped feature, so project knowledge accumulates instead of being re-derived
+  every feature. It is read LAZILY (orchestrator while researching/planning; the
+  coder as inline excerpts for the module it touches), which is what keeps
+  `conventions.md` free to stay under its ~50-line budget.
+- **The existing-implementation survey.** `domain-researcher` now returns what this
+  codebase already has for the requested feature — closest implementations at
+  `path:line`, what to reuse, what would be duplicated — into `spec.md` section 2b.
+  The architect panel, the plan and `plan-reviewer` all work from it, so "we already
+  have this" surfaces before code is written, not in review. The trivial tier skips
+  the researcher but not the survey.
+- **`project-map.md` is a workflow doc to the approval gate**, so Stage 5's knowledge
+  update isn't blocked at the one moment it is written — the final checkpoint, with
+  the gate `LOCKED`.
+- **Ordinary chat sees the map too.** `init` adds a pointer to `project-map.md` in
+  `CLAUDE.md` — deliberately a pointer, not an `@`-import: importing it would load
+  the whole map into every session (the standing cost the lazy-read design avoids)
+  to answer a question most turns never ask. `conventions.md` stays `@`-imported,
+  because rules apply to every turn and a map does not.
+
+### Changed
+- **Review loops are bounded at 2 fix rounds, then the user arbitrates.** The loop
+  was "if reviewers found issues, have coder fix them, then re-review" — no exit
+  condition, so coder and reviewer could argue until the context ran out. Now:
+  re-reviews are delta-scoped to the previous findings plus the fix diff (not the
+  phase again); findings are labelled BLOCKING or NIT and only BLOCKING ones can
+  spend a round; the same finding is never sent back unchanged. Applies to the phase
+  review, the Stage 3 plan review, and the Stage 5 audit.
+- **The coder may dissent.** It answers a finding it believes is wrong with evidence
+  (`file:line`, the covering test) instead of editing to make it go away, and returns
+  FIXED / DISAGREE / NEEDS-DECISION per finding. Complying with a mistaken review
+  puts a real defect in the code — that is the cost the round budget was hiding.
+- **Deadlocks escalate to the user instead of being ticked away.** Budget exhausted
+  with a blocking finding open → stop, present the finding, the rebuttal and a
+  recommendation via `AskUserQuestion`. `[x] code-reviewed` now means resolved — by
+  fix, by an accepted rebuttal, or by the user's explicit call — never "we ran out of
+  rounds". An unresolved security finding always goes to the user, and to Stage 5.
+- **`phase-log.md` records the argument**: `- Review rounds: N/2`, `- Unresolved:`,
+  `- Deferred nits:`, and `- Project map updated:` in the final section. Prose lines,
+  not parsed by the hooks — they exist so you can see how contested a phase was
+  before approving it.
+
 ## [0.6.2] - 2026-07-14
 
 Closes an independent audit of 0.6.1. Every finding was reproduced by running the
