@@ -5,6 +5,115 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-07-22
+
+Two complaints from running 0.7.0: the designs came back over-built, and small
+changes ran the machinery of large ones. Same root cause — every role in the
+workflow was rewarded for adding, and nobody was paid to cut.
+
+### Added
+- **Plan guard (`hooks/plan_guard.py`) — the anti-bloat rules are now ENFORCED, not
+  just advised.** Everything above is prompt text, and prompt text kept losing to the
+  model's instinct to split work and keep reviewing. A `Stop` hook now refuses to end
+  a turn when a drafted `plan.md` leaves `## Size estimate` at the placeholder, when a
+  phase after the first carries no `- Why separate:` reason, or when a phase-log
+  records more than 2 review rounds with an empty `- Unresolved:`.
+  No hook can judge whether four phases were warranted — a hook that tried would block
+  good plans. It checks that the justification EXISTS: "because it is a separate step"
+  passes. What it removes is the SILENT split and the silently-blown budget, which
+  nobody can review. Silent until a phase has a real `- Scope:` (a scaffolded plan is
+  not a plan, and Stages 0.5–2 legitimately write none), fail-open, and bounded like
+  the evidence gate — it gives up loudly after 3 refusals rather than trap a turn.
+- **The guard also keeps `project-map.md` alive.** Nothing forced the map to be
+  updated — and the anti-bloat work above made that worse, not better: single-phase
+  features skip Stage 5, Stage 5 is the only stage that maintains the map, and phases
+  now have to earn themselves, so single-phase is the common case. The map would have
+  rotted fastest on the commonest path. A finished feature (every section approved),
+  in a project that has a map, must now carry a `- Project map updated:` line on its
+  LAST section — anywhere else and an early phase could answer "no structural change"
+  for work a later phase did. `"no structural change"` is a complete answer; silence
+  is not. 25 tests, including the shipped templates passing their own guard both
+  empty and filled.
+- **Stage 0.5 — the requirements conversation, before anything is delegated.** The
+  orchestrator now plays analyst: restate the request concretely, write acceptance
+  criteria, surface conflicts with what the code already does, and ask — in ONE
+  batched round — only the questions whose answers fork the design, stating
+  assumptions in writing for everything else. Deliberately not a subagent: a
+  subagent cannot stop to ask, so it would pick a reading silently, and a plan built
+  on a wrong reading passes every review in this workflow, because reviewers check
+  the code against the plan and never the plan against what was wanted.
+- **Acceptance criteria actually exist now** (`spec.md` section 1b), plus a section
+  1c recording what was asked, answered, and assumed. The evidence ledger already
+  demanded "one artifact per acceptance criterion" and `plan.md` had a per-phase
+  `Done when:` — but nothing in the workflow ever wrote the criteria down, so both
+  pointed at nothing. They now flow from 1b into each phase's `Done when:`, into
+  `plan-reviewer`'s new coverage check (a criterion no phase delivers is a missing
+  phase; a phase serving no criterion is scope creep), and into the ledger.
+
+### Changed
+- **The machinery is now sized to the diff, not to the description.** The
+  orchestrator estimates files and rough lines BEFORE picking a tier and says the
+  estimate out loud; **a feature is trivial by default** and moving up a tier
+  requires naming the signal that puts it there (a new interface, new persistent
+  state, a boundary crossed). Each tier now states exactly what runs, so "standard"
+  can't quietly mean "everything".
+- **The tier is re-checked after the plan is drafted** — the first point where the
+  size is real rather than guessed — and downgrading needs no permission: collapse
+  the phases, drop the stages the lighter tier doesn't run, tell the user. Upgrading
+  does need a named reason. The plan checkpoint now leads with tier, phase count and
+  estimated size, so the user can reject the shape before paying for it.
+- **Phase counts start at ONE and every extra phase must be justified** — it crosses
+  a subsystem boundary, it needs its own rollback point, or it is too big to review
+  in one sitting. The old "typically 2–5 phases for standard" guidance was an anchor
+  that produced three phases for twenty-line changes; there is deliberately no target
+  count now, because a range reads as a quota to fill.
+- **`plan-reviewer` reviews in both directions.** It hunted only for what was
+  missing, which made it a force for more work in a workflow that already had one.
+  Over-engineering is now a first-class finding alongside missing work — speculative
+  abstraction, config nobody will change, unrelated refactors and docs that crept in
+  — and "merge these phases" / "this phase doesn't need to exist" / "this plan is too
+  heavy for what it delivers" are recommendations it is expected to make. It checks
+  the plan against the Simplicity contract, which binds the plan and not just code.
+- **Architects must stay proportional and report size.** An angle is a lens, not a
+  licence to grow the change: an option that solves a problem this project doesn't
+  have is a losing option even from its own angle, and an architect with nothing to
+  add at this size should say so rather than manufacture a difference. Every option
+  now reports files + rough lines and how much of it is NEW structure, and that lands
+  as a **Size column in the comparison table**, so bloat is visible at the moment the
+  user chooses instead of three phases later.
+- **External research is a separate switch from the codebase survey.** The survey is
+  cheap and nearly always worth it; a web round-trip is only worth it when there is a
+  real external question (unfamiliar protocol, domain rule with a standard answer,
+  library choice, known-pitfall area). Adding a field to a response has none, and
+  `domain-researcher` now returns survey-only when told to.
+- **The templates stopped anchoring the plan up.** `plan.md` carried its own
+  "typically 2–5 phases" line and scaffolded three empty phase blocks — the skill
+  can say "start from one" all it likes while the file copied into every feature
+  hands the model three slots to fill. It now scaffolds ONE phase, states the
+  earn-your-phase rule, and carries a `Size estimate` section so an over-built plan
+  is visible before approval. `phase-log.md` likewise scaffolds one phase section,
+  not two.
+
+### Fixed
+- **Stage 5 was skipped on the wrong condition.** Its header said "trivial +
+  single-phase" while the tier table said a standard feature that ends up one phase
+  skips it too. A standard single-phase feature therefore either ran a cross-phase
+  review with no cross-phase to review, or left an unticked `## Final review`
+  section — which `status.py` reports as the current phase forever, so the feature
+  never reads as done. One rule now, in the skill, the tier table and the template:
+  **skip when the feature is a single phase, in any tier.**
+- The sizing rules sat physically before the stage they depend on (you cannot size a
+  request you have not pinned down), and are now Stage 0.8, after the clarify stage.
+- Stage 4 now records `- Deferred nits:` — the field existed in the template with no
+  instruction that ever filled it.
+- `security-scan-fast` says whether each finding BLOCKS the phase, so its
+  Critical/High/Medium/Low severities map onto the BLOCKING/NIT vocabulary the review
+  round budget is actually spent on.
+- **Plans cover the change, not a project.** Migrations, config, flags, docs,
+  monitoring and refactors of code that happened to be read do not get a phase unless
+  the feature cannot work without them — they go to the user as a suggestion or into
+  `spec.md` non-goals.
+
 ## [0.7.0] - 2026-07-22
 
 Two gaps that showed up in real runs: agents that didn't know what the project
