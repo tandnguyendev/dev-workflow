@@ -1,6 +1,6 @@
 ---
 name: feature
-description: Orchestrate a full spec-driven feature workflow — detect domain/conventions, research, solution options, plan, phased implementation with per-phase reviews, and a final audit. Domain-agnostic. Stops for user approval at every checkpoint.
+description: Orchestrate a full spec-driven feature workflow — establish project context, clarify the request into acceptance criteria, size the work, research, solution options, plan, phased implementation with per-phase reviews, and a final audit. Machinery scales to the size of the change. Domain-agnostic. Stops for user approval at every checkpoint.
 ---
 
 # Feature workflow (orchestrator)
@@ -15,8 +15,9 @@ and keep the conversation with the user — you don't do those yourself.
   three names always mean the copy there). Write decisions to files as you go;
   re-read if unsure.
 - `conventions.md` says HOW code is written here; `project-map.md` says WHAT
-  already exists and where. Never plan a feature without the second — an agent
-  that doesn't know what the project already does rebuilds it.
+  already exists and where. Never plan a feature without knowing what the project
+  already does — from the map, or from the survey when there is no map. An agent
+  that doesn't know rebuilds it.
 - STOP at every checkpoint and wait for the user. NEVER skip one or advance an
   unapproved phase.
 - Use the feature description from arguments if given; otherwise ask first.
@@ -50,6 +51,22 @@ gate to the NEXT phase. If you are unsure whether they approved, they did not: a
 Tick each box as its step completes, not in a batch at the end — the gate can only
 protect a phase it knows has been reviewed.
 
+## `plan.md` has a machine-checked contract too
+
+The plan guard (`hooks/plan_guard.py`, a `Stop` hook) refuses to let a turn end
+while any of these is missing. It cannot judge whether a reason is GOOD — that is
+the user's call at the plan checkpoint — only whether you made the choice silently.
+
+| Field | Where | Why it is enforced |
+|---|---|---|
+| `## Size estimate` | `plan.md`, once any phase's `- Scope:` is filled | It is what makes an over-built plan visible at the checkpoint. A plan that hides its size hides the thing the user needs to reject it. |
+| `- Why separate:` | every phase AFTER the first | Each extra phase costs the user an implement-review-approve round-trip. Splitting stays allowed; splitting without naming why does not. |
+| `- Unresolved:` | any `phase-log.md` phase whose `- Review rounds:` exceeds 2 | Going past the budget means coder and reviewer did not converge — that is a decision for the USER, and the extra rounds must not pass silently. |
+| `- Project map updated:` | the LAST section of a finished feature, when the project has a `project-map.md` | Stage 5 is what maintains the map — and single-phase features skip Stage 5, which is now most of them. `"no structural change"` is a complete answer; saying nothing is not. |
+
+Until a phase has a real `- Scope:`, the plan is still the untouched scaffold and
+the guard stays silent — Stages 0.5–2 legitimately end turns with no plan written.
+
 ## Setup — feature workspace
 1. Derive a short kebab-case `slug` (e.g. `wallet-topup`).
 2. Create `.dev-workflow/features/<slug>/` and scaffold `spec.md`, `plan.md`,
@@ -67,19 +84,6 @@ full model ID, or `inherit`; keys starting with `_` are ignored). When you spawn
 agent named there, pass that model as the spawn-time model override; for any agent
 NOT listed, use its frontmatter default. If the file is absent or unparseable,
 every agent keeps its default — never block on this.
-Before Stage 1, classify the feature to scale the machinery and save tokens.
-Default to the LIGHTER tier when unsure; tell the user the tier and let them bump
-it up.
-- **trivial** (tiny, localized, low-risk): SKIP Stage 1 and the Stage 2 panel —
-  propose inline. Usually single-phase — if so, skip Stage 5 (the per-phase review
-  is the final one).
-- **standard** (normal feature, a few phases): full loop, 2-agent option panel.
-- **complex** (architectural, security-sensitive, wide blast radius): full
-  machinery — 3-agent panel, full final audit.
-The tier scales research and option-panel depth — NOT security coverage:
-`code-reviewer` runs every phase in every tier, and `security-scan-fast` runs
-whenever a phase touches a security-sensitive surface (see Stage 4), trivial or
-complex alike.
 
 ## Stage 0 — Establish project context
 Read `conventions.md` (domain + engineering rules) and `project-map.md` (module
@@ -97,7 +101,90 @@ map, existing features, shared building blocks, extension points) if they exist.
   to hook into) and carry THOSE forward. You hand agents excerpts, never "go read
   project-map.md" — the point of the file is that they don't each pay for it.
 
+## Stage 0.5 — Clarify the request (this part is yours; you are the analyst)
+**You are the only party in this workflow who can talk to the user.** Subagents
+cannot stop to ask — they will silently pick an interpretation and build it, and a
+plan built on a wrong reading survives every review in this workflow, because
+reviewers check whether the code matches the plan, not whether the plan matches what
+was wanted. So requirements work happens HERE, before anything is delegated, and it
+is never delegated itself.
+
+1. **Restate the request** in your own words, concretely: what the user wants, who or
+   what will use it, and what visibly changes for them when it ships. A restatement
+   the user corrects in one line has already paid for the whole stage.
+2. **Write acceptance criteria** into `spec.md` section 1b — concrete and checkable,
+   each one something you could later point an artifact at ("a request with no
+   `page` param returns the first 20 orders"), not a goal ("pagination works").
+   These are what Stage 4's Evidence ledger cites one artifact per, and what
+   `plan.md`'s per-phase `Done when:` lines come from. Two to five is normal; a
+   trivial change may have one.
+3. **Surface conflicts with what exists** — from the map and the survey. "The orders
+   endpoint already caps at 50; do you want pagination on top of that cap or
+   replacing it?" is the kind of question only someone who read the code can ask,
+   and it is the highest-value thing you do in this stage.
+4. **Ask only what changes what gets built**, and batch it: ONE `AskUserQuestion`
+   round, at most 3–4 questions, the ones whose answers actually fork the design.
+   For everything else **state an assumption instead of asking** — an assumption in
+   writing is faster for the user than a question, because vetoing takes one word and
+   silence means yes. Record them in `spec.md` section 1c.
+   Do NOT ask: implementation details the user has no stake in, anything the code
+   already answers (go read it), or ceremonial questions ("should I add tests?" —
+   yes). An interrogation is a worse failure than a wrong assumption you stated,
+   because the user can catch the assumption.
+5. **CHECKPOINT — only if you actually asked something.** If the restatement,
+   criteria and assumptions raise no real fork, say them and keep going; do not
+   manufacture a stop. A trivial change is usually one line of restatement, one
+   criterion, and straight on.
+
+Scale this like everything else: trivial changes get a sentence, complex features get
+the full conversation. And this stage does not close — if an ambiguity appears later,
+at planning or mid-implementation, YOU resolve it with the user then. Never guess, and
+never hand the guess to a subagent to make for you.
+
+## Stage 0.8 — Size it: the machinery must be proportional to the change
+**The user pays for this workflow in wall-clock time and approval round-trips.** A
+20-line change that runs a research agent, an architect panel, three phases and five
+checkpoints is not thoroughness — it is a workflow failure, and it is the failure
+this stage exists to prevent. Every stage you run must be one you could justify to
+someone waiting on a 20-line fix.
+
+**First, estimate the diff.** You could not do this before Stage 0.5 — you cannot
+size a request you have not pinned down. Use the `project-map.md` excerpts and a
+quick read of the files involved: how many files, roughly how many lines, one
+subsystem or several. Say the estimate out loud to the user along with the tier. An
+estimate you refuse to make is how a small change ends up on the heavy path.
+
+**A feature is TRIVIAL by default.** Moving up a tier requires you to NAME the signal
+that puts it there. "It feels like a real feature" is not a signal — most requests
+feel like real features and most of them are twenty lines.
+
+| Tier | It is this tier only if you can name one of these | What actually runs |
+|---|---|---|
+| **trivial** | *(default)* one subsystem, one reviewable diff, no new interface, no new dependency, no new persistent state — a validation rule, an added field, a config value, a bug fix, a new parameter with a default | codebase survey (map excerpts + read the files) → propose inline → **1 phase** → `code-reviewer` (+ `security-scan-fast` if the surface warrants) → your approval. **No researcher, no panel, no plan-reviewer, no Stage 5.** |
+| **standard** | a new interface others will call (endpoint, command, screen, public function), OR new persistent state/schema, OR several files across one subsystem | survey, plus external research **only if there is a real external question** → 2-architect panel → plan + `plan-reviewer` → phases → Stage 5 only if the plan ended up with more than one phase |
+| **complex** | crosses a subsystem or trust boundary, OR changes a data model other code depends on, OR the design itself is security-sensitive, OR wide blast radius | full machinery — 3-architect panel, full final audit |
+
+**Re-check the tier after the plan is drafted, and DOWNGRADE without ceremony.** This
+estimate is a guess; the plan is when you actually know. If the work turned out to be
+one small diff, collapse it: drop the remaining phases into one, skip Stage 5, and
+tell the user you scaled it down and why. Downgrading needs no permission. Upgrading
+does: name the signal and tell the user before you spend their time on it.
+
+The tier scales research and option-panel depth — NOT security coverage:
+`code-reviewer` runs every phase in every tier, and `security-scan-fast` runs
+whenever a phase touches a security-sensitive surface (see Stage 4), trivial or
+complex alike. Nor does it scale the approval checkpoints: a cheaper tier means less
+machinery between the checkpoints, never fewer of them.
+
 ## Stage 1 — Research  (skip for trivial)
+**Two switches, not one.** The codebase survey is almost always worth it — it is
+cheap, targeted, and it is what stops us rebuilding something. External research is
+NOT: it is only worth a subagent and a web round-trip when there is a real external
+question — an unfamiliar protocol/format, a domain rule with a standard answer, a
+library choice, a known-pitfall area (auth, money, time zones, concurrency). Adding
+a field to a response has no external question. When there isn't one, tell the
+researcher to skip the web work and return the survey only, and say so to the user.
+
 1. Spawn `domain-researcher` with the feature description AND the `project-map.md`
    excerpts from Stage 0. It returns TWO things: external research (patterns,
    pitfalls) and a survey of what THIS codebase already has for this feature —
@@ -117,18 +204,29 @@ Reads, not a subagent.
 ## Stage 2 — Solution options (independent panel)
 1. Spawn a `solution-architect` panel IN PARALLEL, sized by tier (3 complex / 2
    standard / skip trivial). Give each a DIFFERENT angle (simplicity-,
-   performance-, risk-first) with the description + research summary + the
+   performance-, risk-first) with the description + the acceptance criteria from
+   `spec.md` 1b (an option is only valid if it satisfies them) + research summary + the
    existing-implementation survey and the building blocks / extension points from
    the map — independent context reduces single-thread bias, but an architect
-   blind to what already exists designs a parallel copy of it.
-2. Synthesize into `spec.md` section 3 as a comparison table (complexity /
-   performance / security risk / effort). Merge near-duplicates. Present the
+   blind to what already exists designs a parallel copy of it. **Tell every
+   architect your diff estimate and that the option must be proportional to it**
+   — an angle is a lens, not a licence to grow the change. Left unanchored, a
+   performance-first architect will invent a cache for a fifteen-line fix, and the
+   synthesis then lands somewhere between "what was asked" and "what was invented".
+2. Synthesize into `spec.md` section 3 as a comparison table (**size — files and
+   rough lines** / complexity / performance / security risk / effort). The size
+   column is the point: it makes an over-built option visible to the user at the
+   checkpoint instead of three phases later. Merge near-duplicates. Present the
    options the panel ACTUALLY returned — one per architect, minus merges. Do NOT
    invent an extra option to hit a count: a synthesized option you wrote yourself
    carries the single-thread bias the panel exists to remove. If you think the
    panel missed an angle, say so to the user and offer to spawn another architect
    for it; don't quietly fill the gap.
-3. Give your recommendation first, but don't decide for the user.
+3. Give your recommendation first, but don't decide for the user. If the smallest
+   option satisfies the request, recommend it and say plainly what the larger ones
+   buy — "handles 100× the traffic we have" is a cost, not a feature. The
+   Simplicity contract in `conventions.md` binds this stage: no speculative
+   options, config, or abstraction for imagined future needs.
 4. **CHECKPOINT: use AskUserQuestion so the user picks. Stop and wait.** Record
    the choice + rationale in `spec.md` sections 4–5.
 
@@ -137,21 +235,28 @@ Reads, not a subagent.
    planning stance — Plan Mode is behavioral, not a hard write-lock).
 2. Map the files to change; split the work into phases. Write `plan.md`, following
    these rules:
-   - **Right-size phases — each costs a full loop** (coder + reviewers + checkpoint
-     + a user approval round-trip), so don't over-split. A phase is a coherent,
-     independently-reviewable, independently-approvable unit of behavior — not the
-     smallest possible edit. Merge steps a reviewer would check in one pass, that
-     touch the same files, or that only make sense together. Aim for the FEWEST
-     reviewable phases: typically 2–5 for standard, 1 for trivial, more only when
-     the blast radius genuinely warrants it. A phase per file, or one reviewable in
-     seconds, is too small; a phase too big to review in one sitting is too big —
-     split it.
+   - **Start from ONE phase and justify every additional one — in writing, on a
+     `- Why separate:` line the plan guard enforces.** A phase costs a full loop —
+     coder, reviewers, an evidence ledger and a user approval round-trip — so the
+     count is the single biggest lever on how long this feels to the user. Add a
+     second phase only when you can NAME the reason: it crosses a subsystem
+     boundary, it needs its own rollback point because the step is risky, or it is
+     genuinely too big to review in one sitting. "It has three
+     logical steps" is not a reason — steps a reviewer checks in one pass, that
+     touch the same files, or that only make sense together are ONE phase.
+     (Deliberately no target count: a range here reads as a quota to fill, and the
+     plan comes back with the number rather than the work. If the honest answer is
+     one phase for a standard feature, that is the plan.) The failure in the other
+     direction is real too — a phase too big to review in one sitting hides bugs —
+     but it is far rarer than over-splitting, and the reviewer will catch it.
    - **Order by dependency, then risk.** No phase depends on something a later
      phase builds; among independent phases, schedule the risky or uncertain ones
      EARLY so the plan fails fast, not late.
    - **Each phase independently testable.** Name how it will be proven — the
      test/command/output that becomes its `- Evidence:` ledger in Stage 4. A phase
-     with no way to verify it is a planning bug.
+     with no way to verify it is a planning bug. Its `Done when:` comes from the
+     acceptance criteria in `spec.md` section 1b; between them, the phases must
+     cover every criterion, and a criterion no phase delivers is a missing phase.
    - **Each phase has a rollback point.** Note where the checkpoint sits so a bad
      phase can be reverted cleanly (ties into the checkpoint/rollback machinery).
    - **Reuse before rebuild.** Name, per phase, the existing building block or
@@ -159,16 +264,31 @@ Reads, not a subagent.
      something the project already has in another form, either use the existing
      one or state in `plan.md` why a second implementation is justified — that is
      a decision the user gets to see, not a silent one.
-3. **Adversarial plan review** (standard + complex tiers; SKIP for trivial): spawn
+   - **Plan the change, not a project.** Only what the request and the chosen
+     option require. Migrations, config, flags, docs, monitoring, refactors of code
+     you happened to read — none of these get a phase unless the feature genuinely
+     cannot work without them. Things that are merely a good idea go to the user as
+     a suggestion, or into `spec.md` section 5 as a non-goal. They do not get
+     planned in silently.
+3. **Re-check the tier now.** The plan is the first point where the size is real
+   rather than guessed. If it came out smaller than the Stage 0.8 estimate,
+   collapse the phases and drop the machinery the lighter tier doesn't run — then
+   tell the user you scaled it down. This is the cheapest correction available in
+   the whole workflow, and it is the one most often skipped.
+4. **Adversarial plan review** (standard + complex tiers; SKIP for trivial): spawn
    the `plan-reviewer` subagent on the drafted `plan.md`, handing it the
-   existing-implementation survey and the map excerpts. It hunts for missing
-   phases, hidden dependencies, oversized/untestable phases, ordering mistakes,
-   rollback gaps, and work that duplicates something the project already has. Fold
-   its findings into `plan.md` (resequence, split, or add phases) before showing
-   the user — note what changed. Bounded like every other review loop: at most 2
-   rounds with the reviewer, then decide or take the disagreement to the user (see
-   the review-round rules in Stage 4).
-4. **CHECKPOINT: present the plan, stop, get approval or edits before any code.**
+   existing-implementation survey, the map excerpts, and your diff estimate. It
+   hunts in BOTH directions — missing phases, hidden dependencies, untestable
+   phases, ordering mistakes, rollback gaps and duplicated work, but equally
+   over-engineering, unnecessary phases, and a plan too heavy for the change it
+   delivers. Fold its findings into `plan.md` (resequence, split, MERGE, add or
+   DELETE phases) before showing the user — note what changed. Bounded like every
+   other review loop: at most 2 rounds with the reviewer, then decide or take the
+   disagreement to the user (see the review-round rules in Stage 4).
+5. **CHECKPOINT: present the plan, stop, get approval or edits before any code.**
+   Lead with the shape — tier, phase count, estimated files/lines — so the user can
+   say "that's too much machinery for this" BEFORE paying for it. If you cut the
+   plan down in step 3, say what you cut.
 
 ## Stage 4 — Phased implementation (loop per phase)
 **Reuse ONE coder across the phases — don't respawn each phase.** Spawn the `coder`
@@ -183,7 +303,8 @@ their value is objective fresh eyes on code they didn't write.
 
 For each phase in `plan.md`, in order:
 1. Give the coder THIS phase only — its scope + the chosen approach, quoted INLINE
-   from the phase's `plan.md` block plus the one-line solution from `spec.md`, and
+   from the phase's `plan.md` block (including its `Done when:` — that is what the
+   coder's Evidence has to prove) plus the one-line solution from `spec.md`, and
    the feature dir path. Hand it the EXACT files to touch as paths — and the
    function/symbol or line range when `plan.md`'s `Files:` names them — so it Reads
    those spots directly instead of Grep-walking the tree to locate them. Include
@@ -216,12 +337,14 @@ For each phase in `plan.md`, in order:
      `[x] security-scanned` if the scan ran). "Resolved" means fixed, rebutted with
      evidence you accepted, or decided by the user at escalation — never "we ran out
      of rounds".
-   - Record `- Review rounds: N/2` and `- Unresolved:` in the phase's section (prose
-     lines, not parsed by the hooks — they exist so the user can see how contested
-     the phase was before approving it).
+   - Record `- Review rounds: N/2`, `- Unresolved:` and `- Deferred nits:` in the
+     phase's section (prose lines, not parsed by the hooks — they exist so the user
+     can see how contested the phase was, and what was consciously let go, before
+     approving it).
    - **Augment the `- Evidence:` ledger** so it carries CITED proof it works:
      test/command output, `file:line` refs, concrete cases verified — one artifact
-     per acceptance criterion, no "looks fine". Ticking `[x] code-reviewed` arms the
+     per acceptance criterion this phase delivers (`spec.md` section 1b), no
+     "looks fine". Ticking `[x] code-reviewed` arms the
      `Stop`-hook evidence gate: it will refuse to let you yield for approval while
      this line is still empty or a placeholder, and it will keep refusing.
 4. **CHECKPOINT: the user reviews AFTER the AI. Stop and wait.** ONLY after the user
@@ -268,14 +391,21 @@ fixes → re-review is round 1. One more if needed is round 2. There is no round
 The same budget applies to every review loop in this workflow: the plan review in
 Stage 3, and the final review and audit in Stage 5.
 
-## Stage 5 — Final review (whole feature)  (skip if trivial + single-phase)
+## Stage 5 — Final review (whole feature)  (skip when the feature is ONE phase)
+**Skip condition: a single-phase feature, in any tier** — there is nothing
+"cross-phase" to review, and the per-phase review already was the whole review. A
+trivial feature is single-phase by definition; a standard one often ends up there
+after the Stage 3 re-check, and it skips this stage too.
+
 **If you SKIP this stage, DELETE the `## Final review` section from `phase-log.md`.**
 The template always scaffolds that section, but nothing ever ticks it when the stage
 is skipped — and `status.py` reports the first unapproved section as the current one,
 so the finished feature is reported as stuck on "Final review" forever. Removing the
 section is what marks the feature done. Skipping the stage does NOT skip step 4
 below: if the change added a capability or moved something, `project-map.md` still
-gets its line at the phase's approval checkpoint.
+gets its line at the phase's approval checkpoint — and since you are deleting the
+Final review section that normally carries `- Project map updated:`, write that line
+on the LAST PHASE instead. The plan guard requires it there.
 
 1. Run over all phases together:
    - `code-reviewer` on CROSS-PHASE issues ONLY — inconsistencies, phase
@@ -306,7 +436,8 @@ gets its line at the phase's approval checkpoint.
 
 ## Notes
 - Subagents can't pause to ask mid-task; scope each delegated task tightly and
-  resolve ambiguity with the user BEFORE delegating.
+  resolve ambiguity with the user BEFORE delegating — that is what Stage 0.5 is
+  for, and why the analyst role is yours and can never be delegated to a subagent.
 - Reviewers are read-only with fresh context; coding stays with `coder` so
   reviewers judge someone else's code.
 - For a hard-enforced approval gate, see the `.approval-gate` hook in the README.

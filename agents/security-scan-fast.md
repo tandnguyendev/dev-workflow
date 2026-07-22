@@ -25,6 +25,10 @@ Flag (ignore style, naming, formatting):
 Return (your final message is the returned data):
 - A list of findings, each with: severity (Critical/High/Medium/Low),
   file:line, a short description, and a suggested fix.
+- Say for each whether it BLOCKS the phase. Critical and High always block; for
+  Medium and Low say which way you lean and why. The orchestrator budgets the
+  fix-and-re-review loop on that call, and an inflated severity spends a round a
+  real vulnerability may need.
 - If nothing obvious is found, say "No obvious vulnerabilities found (fast pass)"
   and cite the concrete surfaces you checked (which files/entry points, which
   categories from the checklist) — a clean verdict must show what was scanned, not

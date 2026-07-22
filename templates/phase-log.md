@@ -1,7 +1,8 @@
 # Phase log: <feature name>
 
 > Append-only record of each phase. Survives /compact and /clear — re-read this
-> instead of trusting conversation memory.
+> instead of trusting conversation memory. ONE section per phase in `plan.md` —
+> copy the block below for a second phase only if `plan.md` has one.
 >
 > **This file is machine-parsed.** Keep the `## Phase N — ...` headings and the
 > `- Status:` / `- Evidence:` lines in the shape below: the hooks find a phase by
@@ -10,6 +11,12 @@
 > read progress from the literal `[x] USER APPROVED`. Reworded into prose, the
 > safety hooks go silent — without saying so.
 > `[x] USER APPROVED` means the USER approved. Claude never ticks it unprompted.
+>
+> Two more lines are machine-checked, by the plan guard: `- Review rounds:` above 2
+> requires a filled `- Unresolved:`, and the LAST section of a finished feature needs
+> a `- Project map updated:` line (it is scaffolded in Final review below — when
+> Stage 5 is skipped, add it to the last phase instead). The rest is prose for you
+> and the user; no hook reads it.
 
 ## Phase 1 — <title>
 - Status: [ ] coded  [ ] code-reviewed  [ ] security-scanned  [ ] USER APPROVED
@@ -22,23 +29,14 @@
 - Evidence: <cited PROOF this phase works — concrete artifacts only, no "looks
   fine". e.g. `pytest -q` -> 12 passed; snapshot ref created + `git rev-parse
   HEAD` unchanged; hooks/x.py:42 handles the empty case. Required before you ask
-  the user to approve; each acceptance criterion should map to an artifact.>
+  the user to approve; one artifact per acceptance criterion this phase delivers
+  (the `Done when:` of its phase in plan.md, from `spec.md` section 1b).>
 - User notes: <what the user said / requested changes>
 
-## Phase 2 — <title>
-- Status: [ ] coded  [ ] code-reviewed  [ ] security-scanned  [ ] USER APPROVED
-- Changed:
-- Code review result:
-- Security scan result:
-- Review rounds:
-- Unresolved:
-- Deferred nits:
-- Evidence:
-- User notes:
-
 ---
-<!-- DELETE this whole section if Stage 5 is skipped (trivial + single-phase): an
-     unticked section is reported as the current one forever. -->
+<!-- DELETE this whole section if Stage 5 is skipped — i.e. whenever the feature
+     ended up a SINGLE phase, in any tier: an unticked section is reported as the
+     current one forever. -->
 ## Final review (all phases)
 - Status: [ ] full code review  [ ] security-audit  [ ] USER APPROVED
 - Cross-phase findings:

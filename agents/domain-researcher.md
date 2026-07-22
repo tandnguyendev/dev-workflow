@@ -30,6 +30,10 @@ the whole repo.
 Rules:
 - READ and look things up ONLY. Do NOT modify or write code files.
 - Prefer authoritative sources; state clearly when a recommendation is contested.
+- **If the brief says survey-only, skip the web work entirely** and return just the
+  codebase survey. Most small changes have no external question, and searching the
+  web for one costs the user time for nothing. Even when you do research, stop when
+  you have the answer — don't pad the report to look thorough.
 - Cite files as `path:line`. Do not report an existing capability you did not open
   and read — a confident wrong "this already exists" is expensive.
 

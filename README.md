@@ -75,16 +75,17 @@ Working docs scaffold automatically under `.dev-workflow/features/<slug>/`; mult
 
 ## Safety & reliability
 
-Four hooks make the workflow *trustworthy*, not just well-behaved. All fail open — a hook that errors never blocks your work.
+Five hooks make the workflow *trustworthy*, not just well-behaved. All fail open — a hook that errors never blocks your work.
 
 | | Gives you |
 |---|---|
 | 🔒 **Approval gate** | A `LOCKED` gate only *you* can flip: while locked, Claude cannot edit source or run Bash |
 | 💾 **Checkpoints + rollback** | Auto git snapshots before every edit; safe reversible restore |
 | 🧾 **Evidence gate** | "Done" must cite proof — an empty ledger is refused |
+| 📏 **Plan guard** | Extra phases and blown review budgets must be justified in writing, not chosen silently |
 | ♻️ **Context re-injection** | Workflow state survives `/compact` |
 
-Three of the four stay silent when no workflow is active. **Checkpoints are the exception**: in any git repo, the checkpoint hook snapshots before every `Edit`/`Write`/`MultiEdit`/`Bash` whether or not a dev-workflow feature is running. It writes only to its own shadow refs — never your index, HEAD, branch, or worktree — but it is not side-effect-free, and the refs are not pruned automatically (see the v1 limits below).
+Four of the five stay silent when no workflow is active. **Checkpoints are the exception**: in any git repo, the checkpoint hook snapshots before every `Edit`/`Write`/`MultiEdit`/`Bash` whether or not a dev-workflow feature is running. It writes only to its own shadow refs — never your index, HEAD, branch, or worktree — but it is not side-effect-free, and the refs are not pruned automatically (see the v1 limits below).
 
 <details>
 <summary><b>🔒 Approval gate</b> — how it works</summary>
@@ -130,6 +131,23 @@ To stop it from hard-locking a turn, it gives up after 3 consecutive blocks — 
 </details>
 
 <details>
+<summary><b>📏 Plan guard</b> — how it works</summary>
+
+<br>The two levers that decide how long a feature *takes* are numbers the model picks for itself: how many phases the plan has, and how many rounds a phase spends arguing with its reviewer. Prompt text alone kept losing to the instinct to split work and keep reviewing — which is how a twenty-line change grows a three-phase plan.
+
+A `Stop` hook (`hooks/plan_guard.py`) refuses to end a turn when:
+
+- `plan.md` has been drafted but its **`## Size estimate`** is still the placeholder — the size is what makes an over-built plan visible at the approval checkpoint.
+- a plan has more than one phase and some phase after the first has no **`- Why separate:`** reason. Splitting stays allowed; splitting *silently* does not.
+- a `phase-log.md` phase records more than 2 **review rounds** with an empty `- Unresolved:` — the budget was blown and nothing was escalated to you.
+- a **finished** feature never said what it did to **`project-map.md`** (only when the project has one). Stage 5 is what maintains the map, and single-phase features skip Stage 5 — which, now that phases have to earn themselves, is most of them, so the map would rot fastest on the commonest path. `"no structural change"` is a complete answer; silence is not.
+
+**What it can and cannot check.** No hook can judge whether four phases were warranted; that is a design opinion, and one that tried would block good plans. It checks that the justification EXISTS — "because it is a separate step" passes the hook. What it removes is the silent case, which nobody can review. You are still the one who reads the reason at the plan checkpoint and says "no, merge them".
+
+Silent until a phase has a real `- Scope:` (the scaffolded plan is not a plan), and bounded like the evidence gate: it gives up loudly after 3 refusals rather than trap a turn.
+</details>
+
+<details>
 <summary><b>♻️ Context re-injection</b> — how it works</summary>
 
 <br>A `SessionStart` hook (`hooks/status.py`) re-surfaces the active feature, phase progress, and gate state at every session start — **including after `/compact` or auto-compaction** (it fires with `source: "compact"` and adds a "context was just compacted — re-read the files" reminder). This keeps the file-based source of truth (`spec.md` / `plan.md` / `phase-log.md`) from being lost to context rot.
@@ -139,10 +157,12 @@ To stop it from hard-locking a turn, it gives up after 3 consecutive blocks — 
 
 - **Files are the source of truth** — `spec.md` / `plan.md` / `phase-log.md` survive `/compact` and `/clear`. Re-read them, don't trust conversation memory.
 - **You review AFTER the AI** reviewers at every phase; nothing advances unapproved.
-- **Token triage** — the `feature` skill sizes each job (trivial / standard / complex) and scales the machinery: trivial skips research and the option panel; standard runs a 2-architect panel; complex runs a 3-architect panel and a full final audit. **The tier never scales security coverage down**: `code-reviewer` runs on every phase in every tier, and `security-scan-fast` is gated on the phase's *surface*, not the tier — a new endpoint in a trivial feature gets scanned; a copy tweak in a complex one does not.
+- **Proportional machinery** — the `feature` skill estimates the diff first, then sizes the job (trivial / standard / complex) and scales the machinery to it: trivial skips research and the option panel and runs as **one** phase; standard runs a 2-architect panel; complex runs a 3-architect panel and a full final audit. **A feature is trivial by default** — moving up a tier means naming the signal that puts it there — and the tier is re-checked once the plan makes the real size visible, so a change that turned out small gets collapsed instead of running the plan it was guessed to need. Phase counts start at one and every extra phase has to earn itself, because each one costs you an implement-review-approve round-trip. **The tier never scales security coverage down**: `code-reviewer` runs on every phase in every tier, and `security-scan-fast` is gated on the phase's *surface*, not the tier — a new endpoint in a trivial feature gets scanned; a copy tweak in a complex one does not.
 - **Token discipline across phases** — the fresh-context re-reads that make multi-phase workflows expensive are attacked directly: **one `coder` is reused across a feature's phases** (continued, not respawned) so codebase intake is paid once, not per phase; the orchestrator hands coder and reviewers the **exact files/paths** from `plan.md` so they Read the spot instead of Grep-walking to find it; and `conventions.md` is kept lean because every subagent re-reads it in full. Reviewers stay freshly spawned per phase on purpose — objective fresh eyes are the point. (An MCP can *store* shared context but can't avoid this cost: each subagent still pulls it into its own window.)
 - **Optional: semantic code retrieval** — on large codebases, a symbol-level retrieval MCP (e.g. [Serena](https://github.com/oraios/serena)) lets agents read *symbols* rather than whole files, shrinking read size. It's an opt-in per-project MCP, not bundled — add it to your own `.mcp.json` if the codebase is big enough to warrant it.
 - **The agents know what the project already has** — two project-level files, split by what they cost. `conventions.md` holds the RULES and is re-read in full by every subagent every phase, so it stays lean; **`project-map.md`** holds what EXISTS — module map, shipped features, shared building blocks, extension points, gotchas — and is read lazily: the orchestrator when researching and planning, the coder as inline excerpts for the module it's touching. `init` drafts it, the researcher verifies it against the code (**the code wins when they disagree**), and Stage 5 appends each shipped feature — so knowledge accumulates instead of being re-derived per feature. Without it, agents cheerfully propose rebuilding what's already there.
+- **The requirements conversation happens before anything is delegated.** Stage 0.5 has the orchestrator play analyst: restate the request concretely, write **acceptance criteria** into `spec.md`, surface conflicts with what the code already does, then ask — in ONE batched round — only the questions whose answers fork the design, stating assumptions in writing for everything else (vetoing an assumption costs the user one word; answering an interrogation costs an afternoon). This is deliberately *not* a subagent: a subagent cannot stop to ask, so it would silently pick a reading and build it — and a plan built on a wrong reading passes every review here, because reviewers check code against the plan, not the plan against what you wanted. The criteria then flow all the way down: each phase's `Done when:`, the plan reviewer's coverage check, and the Evidence ledger's one-artifact-per-criterion rule.
+- **Someone is paid to cut.** Every other role in the workflow is rewarded for adding — the architect for a richer option, the reviewer for another finding, the planner for another phase — and nothing balanced that, which is how a fifteen-line change grew a three-phase plan. So `plan-reviewer` now reviews in *both* directions and treats over-engineering as a first-class finding ("merge these", "this phase doesn't need to exist", "the plan is too heavy for what it delivers"); architects are told their angle is a lens, not a licence to grow the change, and must report each option's **size in files and lines** so bloat is visible in the comparison table *before* you pick; and the Simplicity contract from `conventions.md` binds the plan, not just the code.
 - **Review loops are bounded — 2 rounds, then you arbitrate.** A coder and a reviewer left alone argue indefinitely: the reviewer keeps finding things because finding things is its job, and each round re-opens what the last one settled. So re-reviews are delta-scoped (the previous findings + the fix diff, *not* the phase again), findings are labelled BLOCKING or NIT and only BLOCKING ones can spend a round, and **the coder is allowed to disagree** — answering with evidence instead of editing away a finding it believes is wrong, because complying with a mistaken review puts a real defect in the code. If the budget runs out with a blocking finding still open, the workflow stops and asks *you*; it never resolves a deadlock by ticking `code-reviewed` itself. Each phase records `Review rounds: N/2` and what stayed unresolved.
 - **Domain context** ships per-project via `conventions.md` (plugins can't ship a project `CLAUDE.md`). The plugin's skills and subagents Read it directly; `init` also adds an `@conventions.md` import to your `CLAUDE.md` so plain chat sessions — not just `/dev-workflow:*` — carry the same project context. `project-map.md` gets a *pointer* in `CLAUDE.md` rather than an import, so ordinary chat knows the map exists and reads it when a task needs it, without paying for the whole map in every session. A minimal `references/clean-code.md` baseline applies in **every** project, greenfield or not — but it is strictly subordinate: on a genuine conflict, precedence is linter/formatter > `conventions.md` > surrounding style > baseline.
 

@@ -27,7 +27,8 @@ import os
 import re
 import sys
 
-from _workflow import STATE_DIR, docs_dir, iter_phases, read
+import _workflow
+from _workflow import docs_dir, field_text, is_unfilled, iter_phases, read
 
 REVIEW_DONE = re.compile(r"\[[xX]\]\s*(?:code-reviewed|full code review)")
 
@@ -36,89 +37,30 @@ REVIEW_DONE = re.compile(r"\[[xX]\]\s*(?:code-reviewed|full code review)")
 # enough that a genuinely stuck turn escapes in seconds.
 MAX_BLOCKS = 3
 COUNTER_FILE = "evidence-gate.json"
-_MAX_KEYS = 64  # bound the file; far more than any plausible number of live phases
 
-
-def _counter_path(root):
-    return os.path.join(root, STATE_DIR, COUNTER_FILE)
-
-
-def _load_all(root):
-    """The whole {key: count} map, or {} if missing/corrupt."""
-    data = read(_counter_path(root))
-    if not data:
-        return {}
-    try:
-        obj = json.loads(data)
-        return obj if isinstance(obj, dict) else {}
-    except Exception:
-        return {}  # corrupt -> start over rather than fail shut
+# Counters live in _workflow (shared with the plan guard); these keep this hook's
+# own signature — keyed PER phase and per feature, so two concurrent features never
+# reset each other's budget.
 
 
 def load_counter(root, key):
-    """Consecutive refusals already issued for `key`. Keyed PER phase (and per
-    feature), so two concurrent features never reset each other's budget."""
-    try:
-        return int(_load_all(root).get(key, 0))
-    except Exception:
-        return 0
+    return _workflow.load_counter(root, COUNTER_FILE, key)
 
 
 def save_counter(root, key, count):
-    """Persist `count` for `key`. Returns True on success, False if it could not be
-    written. The caller must NOT assume the write succeeded: a read-only or full
-    `.dev-workflow/` would otherwise pin every load at 0, so the count could never
-    grow to the give-up bound and the gate would block forever — the exact hard-lock
-    the bound exists to prevent. On a False return the caller falls back to a signal
-    that does not depend on this file."""
-    try:
-        os.makedirs(os.path.join(root, STATE_DIR), exist_ok=True)
-        allc = _load_all(root)
-        allc[key] = count
-        if len(allc) > _MAX_KEYS:  # keep the most-recently-written keys
-            allc = dict(list(allc.items())[-_MAX_KEYS:])
-        with open(_counter_path(root), "w", encoding="utf-8") as fh:
-            json.dump(allc, fh)
-        return True
-    except Exception:
-        return False
+    return _workflow.save_counter(root, COUNTER_FILE, key, count)
 
 
 def clear_counter(root, key):
-    """Drop just this phase's budget (it advanced or got proven); leave any other
-    feature's counts intact."""
-    try:
-        allc = _load_all(root)
-        if key in allc:
-            del allc[key]
-            with open(_counter_path(root), "w", encoding="utf-8") as fh:
-                json.dump(allc, fh)
-    except Exception:
-        pass
+    return _workflow.clear_counter(root, COUNTER_FILE, key)
 
 
 def evidence_empty(body):
-    """True if the section's `- Evidence:` field is missing, a placeholder, or
-    too short to be real cited proof. Captures everything from the `- Evidence:`
-    field up to the next TOP-LEVEL field bullet (`- Word:` at column 0) or `##`
-    heading, so proof written either inline OR as indented sub-bullets both count.
-
-    The terminator must not match an indented bullet: listing artifacts under the
-    field is the most natural way to cite several of them, and allowing indentation
-    here meant the ledger's own sub-bullets ended it — so real, cited proof read as
-    EMPTY and was refused, while the same text on one line passed.
-    """
-    m = re.search(
-        r"-[ \t]*Evidence:[ \t]*(.*?)(?=\n-[ \t]*[A-Za-z][\w -]*:|\n#{1,4}\s|\Z)",
-        body, re.DOTALL)
-    if not m:
-        return True
-    # Drop leading bullet dashes so "- `pytest` passed" counts as content.
-    val = re.sub(r"^[ \t]*-[ \t]*", "", m.group(1), flags=re.MULTILINE)
-    val = re.sub(r"\s+", " ", val).strip()
-    if not val or val.startswith("<"):
-        return True
-    return len(val) < 15
+    """True if the section's `- Evidence:` field is missing, a placeholder, or too
+    short to be real cited proof. The field-extraction rules (where a field ends,
+    what counts as a placeholder) live in `_workflow`; the 15-character floor is
+    this gate's own — "ok" is technically content but is not proof."""
+    return is_unfilled(field_text(body, "Evidence"), min_len=15)
 
 
 def block(reason):

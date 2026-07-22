@@ -57,8 +57,11 @@ After implementing:
   the workflow's hooks, so write them literally, and only the ones that are yours:
   - Tick `[x] coded` and fill `- Changed:` (files + key decisions).
   - Fill `- Evidence:` with the real output of what you actually ran — the test
-    command and its result, `file:line` for the cases you verified. Never write
-    "looks fine" or leave the placeholder; a Stop hook refuses an empty ledger.
+    command and its result, `file:line` for the cases you verified. What it must
+    prove is the phase's `Done when:` from the brief (the acceptance criteria this
+    phase delivers): one artifact per criterion, so "ran the tests" is not enough if
+    a criterion has no artifact pointing at it. Never write "looks fine" or leave
+    the placeholder; a Stop hook refuses an empty ledger.
   - **Do NOT tick `[x] code-reviewed`, `[x] security-scanned`, or `[x] USER
     APPROVED`.** Those belong to the reviewers and the user. Ticking
     `code-reviewed` yourself would mark your own code reviewed, which is exactly

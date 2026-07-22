@@ -4,7 +4,20 @@
 > if the decision changes.
 
 ## 1. Problem / idea
-<What are we building and why. The user-facing goal.>
+<What are we building and why. The user-facing goal — written as the orchestrator
+restated it back to the user, not as the raw one-line request.>
+
+## 1b. Acceptance criteria
+<Concrete, checkable statements of what must be true when this is done. Each one
+should be something an artifact can be pointed at: "a request with no `page` param
+returns the first 20 orders", not "pagination works". Stage 4's Evidence ledger
+cites one artifact per criterion, and each phase's `Done when:` in plan.md comes
+from here.>
+
+## 1c. Assumptions & answers
+<What the user was ASKED and answered (question -> answer), and what was ASSUMED
+without asking. Assumptions stay visible so they can be vetoed later — an
+assumption nobody can see is just a guess.>
 
 ## 2. Domain research summary
 <Key findings from the domain-researcher: relevant patterns, pitfalls, links.>
