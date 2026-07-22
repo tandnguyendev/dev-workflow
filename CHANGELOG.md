@@ -5,6 +5,37 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-07-22
+
+Three hook gaps, each found by running the hooks exactly as Claude Code runs them
+(JSON payload on stdin, `CLAUDE_PROJECT_DIR` set) and each closed with a red-first
+test that fails on 0.8.0.
+
+### Fixed
+- **`NotebookEdit` bypassed both the approval gate and the checkpoint engine.** It
+  was missing from `hooks.json`'s `PreToolUse` matcher and from `checkpoint.py`'s
+  `MUTATING_TOOLS`, so while the gate said `LOCKED` a phase could still advance
+  through an `.ipynb` file — and notebook edits got no pre-edit snapshot, making
+  them the one kind of change rollback could not recover. Now routed to both hooks;
+  `gate.py` reads its `notebook_path` (it does not use `file_path`) for the
+  gate-file protection and the working-doc carve-out alike. A new
+  `tests/test_hooks_json.py` pins the matchers to `MUTATING_TOOLS` itself, so the
+  wiring and the tool list cannot silently disagree again.
+- **Shell globs could name the gate file without spelling it.** The Bash filename
+  check stripped quotes but not globs: `rm .approval-gat?` and
+  `echo UNLOCKED > .approval*` were allowed while UNLOCKED, letting the model
+  delete its own gate and disarm it for every phase after. Glob-carrying tokens are
+  now `fnmatch`ed against the gate name — only tokens starting with a literal dot,
+  mirroring the shell's own dotfile rule, so everyday globs like `rm *.pyc` are not
+  denied for it. (The check stays best-effort by nature; what makes the lock hold
+  is still that no Bash runs while LOCKED.)
+- **Evidence opening with `<` was refused as the template placeholder.** `<200ms
+  p99 measured via wrk` is real cited proof, but `is_unfilled()` treated any value
+  starting with `<` as the blank — a false block at the exact moment the turn tried
+  to yield for approval. A placeholder is now a value still ENTIRELY wrapped in
+  `<...>`; the template's own blanks (including the long Evidence one, whose prose
+  contains a `->`) still block.
+
 ## [0.8.0] - 2026-07-22
 
 Two complaints from running 0.7.0: the designs came back over-built, and small
