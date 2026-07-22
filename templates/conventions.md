@@ -24,7 +24,11 @@ open only when a task needs them. (This note stays; the guidance blockquotes go.
 > Languages, frameworks, datastores, key libraries, runtime/target.
 
 ## Architecture & structure
-> How the code is organized; where things live; important modules/boundaries.
+> The shape of the system in a few lines: the layers/services and how they talk.
+> Keep it to what every agent needs on every phase. The detailed map — module
+> table, existing features, shared building blocks, extension points — lives in
+> `project-map.md`, which is read only when a task needs it; point there instead
+> of inlining it here.
 
 ## Coding conventions
 > Style, naming, error-handling patterns, testing approach, things reviewers
@@ -63,4 +67,5 @@ fallback. It applies on top of the conventions above, in every project.*
 ## Workflow files
 Per-feature `spec.md` / `plan.md` / `phase-log.md` live under
 `.dev-workflow/features/<slug>/` (active slug in `.dev-workflow/active`); this file
-is project-wide at the repo root. All survive `/compact` and `/clear`.
+and `project-map.md` (what exists and where) are project-wide at the repo root. All
+survive `/compact` and `/clear`.

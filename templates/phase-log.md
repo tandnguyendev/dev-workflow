@@ -16,6 +16,9 @@
 - Changed: <files + key decisions>
 - Code review result: <summary of findings + how resolved>
 - Security scan result: <summary>
+- Review rounds: <N/2 — how many fix→re-review rounds this phase took>
+- Unresolved: <blocking findings closed by escalation + the user's call, or "none">
+- Deferred nits: <non-blocking findings not worth a round, or "none">
 - Evidence: <cited PROOF this phase works — concrete artifacts only, no "looks
   fine". e.g. `pytest -q` -> 12 passed; snapshot ref created + `git rev-parse
   HEAD` unchanged; hooks/x.py:42 handles the empty case. Required before you ask
@@ -27,6 +30,9 @@
 - Changed:
 - Code review result:
 - Security scan result:
+- Review rounds:
+- Unresolved:
+- Deferred nits:
 - Evidence:
 - User notes:
 
@@ -37,5 +43,9 @@
 - Status: [ ] full code review  [ ] security-audit  [ ] USER APPROVED
 - Cross-phase findings:
 - Resolution:
+- Review rounds:
+- Unresolved:
+- Project map updated: <what was appended/corrected in project-map.md, or "no
+  structural change">
 - Evidence: <cited proof for the whole feature — test suite result, validation
   command output, the key invariants checked end-to-end.>

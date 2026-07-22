@@ -28,10 +28,17 @@ Attack the plan on these axes:
 - **Evidence & rollback**: does each phase name what would prove it done, and a
   safe rollback point? Flag phases that can't be checkpointed or reverted.
 - **Scope drift**: phases that exceed or contradict the chosen option in `spec.md`.
+- **Rebuilding what exists**: work the project already has in another form. Check
+  the plan against the existing-implementation survey in `spec.md` and the building
+  blocks / extension points in `project-map.md` (verify against the code — the map
+  can be stale). A phase that adds a second version of something is a finding
+  unless `plan.md` justifies it.
 
 Return (your final message IS the returned data, not a greeting):
 - A list of findings, most severe first, each tied to a specific phase and a
-  concrete fix (split / reorder / add phase / add evidence / add rollback).
+  concrete fix (split / reorder / add phase / add evidence / add rollback / reuse
+  X instead). Label each BLOCKING or NIT — the orchestrator bounds the revise loop
+  at 2 rounds and needs to know which findings actually gate the plan.
 - For each finding, cite what you checked — the phase and the file/spec section
   that grounds the concern (e.g. "Phase 2 edits auth.py:40 but the token schema
   it needs is only added in Phase 4").

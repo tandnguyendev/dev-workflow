@@ -9,6 +9,12 @@
 ## 2. Domain research summary
 <Key findings from the domain-researcher: relevant patterns, pitfalls, links.>
 
+## 2b. What already exists here
+<From the domain-researcher's codebase survey + project-map.md: the closest
+existing implementations (path:line), the building blocks to reuse, the extension
+point this hooks into, and what would be DUPLICATED if built from scratch. "Nothing
+yet" is a valid answer — write it explicitly rather than leaving this blank.>
+
 ## 3. Solution options considered
 | Option | Approach | Complexity | Performance | Security risk | Effort |
 |--------|----------|------------|-------------|---------------|--------|

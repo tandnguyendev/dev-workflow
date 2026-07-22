@@ -21,6 +21,12 @@ Flag (do not comment on style):
   insecure crypto, unsafe deserialization, SSRF, path traversal, race conditions.
 - Any project-specific high-value risks named in `conventions.md`.
 
+If this is a RE-AUDIT after fixes, scope to the findings you raised and the fix
+diff: say FIXED / NOT FIXED / FIX INTRODUCED A NEW PROBLEM for each, and raise new
+findings only where the fixes created them or where a real vulnerability would
+otherwise ship. The audit loop is budgeted at 2 rounds; a finding you cannot get
+resolved goes to the USER as an explicit accepted-risk decision, never dropped.
+
 Return (your final message is the returned data):
 - Findings by severity, each with file:line, a clear explanation of the exploit
   scenario, and a suggested fix.

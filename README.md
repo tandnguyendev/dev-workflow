@@ -32,7 +32,7 @@ The domain isn't hardcoded — it's read from your `conventions.md` (via `/dev-w
 ## Quick start
 
 ```shell
-/dev-workflow:init                       # (optional) learn the repo → conventions.md
+/dev-workflow:init                       # (optional) learn the repo → conventions.md + project-map.md
 /dev-workflow:feature add pagination to the orders endpoint
 /dev-workflow:status                     # where am I?  (also auto-injected each session)
 ```
@@ -45,7 +45,7 @@ Working docs scaffold automatically under `.dev-workflow/features/<slug>/`; mult
 
 | Command | Purpose |
 |---------|---------|
-| `/dev-workflow:init` | Inspect the project, draft `conventions.md`, import it from `CLAUDE.md` |
+| `/dev-workflow:init` | Inspect the project, draft `conventions.md` + `project-map.md`, import conventions from `CLAUDE.md` |
 | `/dev-workflow:feature` | Drive the whole feature workflow (orchestrator) |
 | `/dev-workflow:status` | Readout of the active feature / phase / gate |
 | `/dev-workflow:checkpoints` | List auto-snapshots |
@@ -142,7 +142,9 @@ To stop it from hard-locking a turn, it gives up after 3 consecutive blocks — 
 - **Token triage** — the `feature` skill sizes each job (trivial / standard / complex) and scales the machinery: trivial skips research and the option panel; standard runs a 2-architect panel; complex runs a 3-architect panel and a full final audit. **The tier never scales security coverage down**: `code-reviewer` runs on every phase in every tier, and `security-scan-fast` is gated on the phase's *surface*, not the tier — a new endpoint in a trivial feature gets scanned; a copy tweak in a complex one does not.
 - **Token discipline across phases** — the fresh-context re-reads that make multi-phase workflows expensive are attacked directly: **one `coder` is reused across a feature's phases** (continued, not respawned) so codebase intake is paid once, not per phase; the orchestrator hands coder and reviewers the **exact files/paths** from `plan.md` so they Read the spot instead of Grep-walking to find it; and `conventions.md` is kept lean because every subagent re-reads it in full. Reviewers stay freshly spawned per phase on purpose — objective fresh eyes are the point. (An MCP can *store* shared context but can't avoid this cost: each subagent still pulls it into its own window.)
 - **Optional: semantic code retrieval** — on large codebases, a symbol-level retrieval MCP (e.g. [Serena](https://github.com/oraios/serena)) lets agents read *symbols* rather than whole files, shrinking read size. It's an opt-in per-project MCP, not bundled — add it to your own `.mcp.json` if the codebase is big enough to warrant it.
-- **Domain context** ships per-project via `conventions.md` (plugins can't ship a project `CLAUDE.md`). The plugin's skills and subagents Read it directly; `init` also adds an `@conventions.md` import to your `CLAUDE.md` so plain chat sessions — not just `/dev-workflow:*` — carry the same project context. A minimal `references/clean-code.md` baseline applies in **every** project, greenfield or not — but it is strictly subordinate: on a genuine conflict, precedence is linter/formatter > `conventions.md` > surrounding style > baseline.
+- **The agents know what the project already has** — two project-level files, split by what they cost. `conventions.md` holds the RULES and is re-read in full by every subagent every phase, so it stays lean; **`project-map.md`** holds what EXISTS — module map, shipped features, shared building blocks, extension points, gotchas — and is read lazily: the orchestrator when researching and planning, the coder as inline excerpts for the module it's touching. `init` drafts it, the researcher verifies it against the code (**the code wins when they disagree**), and Stage 5 appends each shipped feature — so knowledge accumulates instead of being re-derived per feature. Without it, agents cheerfully propose rebuilding what's already there.
+- **Review loops are bounded — 2 rounds, then you arbitrate.** A coder and a reviewer left alone argue indefinitely: the reviewer keeps finding things because finding things is its job, and each round re-opens what the last one settled. So re-reviews are delta-scoped (the previous findings + the fix diff, *not* the phase again), findings are labelled BLOCKING or NIT and only BLOCKING ones can spend a round, and **the coder is allowed to disagree** — answering with evidence instead of editing away a finding it believes is wrong, because complying with a mistaken review puts a real defect in the code. If the budget runs out with a blocking finding still open, the workflow stops and asks *you*; it never resolves a deadlock by ticking `code-reviewed` itself. Each phase records `Review rounds: N/2` and what stayed unresolved.
+- **Domain context** ships per-project via `conventions.md` (plugins can't ship a project `CLAUDE.md`). The plugin's skills and subagents Read it directly; `init` also adds an `@conventions.md` import to your `CLAUDE.md` so plain chat sessions — not just `/dev-workflow:*` — carry the same project context. `project-map.md` gets a *pointer* in `CLAUDE.md` rather than an import, so ordinary chat knows the map exists and reads it when a task needs it, without paying for the whole map in every session. A minimal `references/clean-code.md` baseline applies in **every** project, greenfield or not — but it is strictly subordinate: on a genuine conflict, precedence is linter/formatter > `conventions.md` > surrounding style > baseline.
 
 ## Requirements
 

@@ -27,14 +27,31 @@ Focus on:
   `references/clean-code.md` — pointing you at that path meant you and `coder`, who
   has the baseline inlined, were judging against different standards.)
 - Error handling and failure states (partial writes, rollback, retries).
-- Unnecessarily complex or duplicated code that could be reused/simplified.
+- Unnecessarily complex or duplicated code that could be reused/simplified —
+  including a local reimplementation of something the project already provides. If
+  the brief quotes `project-map.md` building blocks or extension points, check the
+  change actually used them.
 - Comment noise: comments that narrate what the next line does, explain where the
   change came from, or argue to you that it's correct; docstrings added to a file
   whose existing functions have none. Flag them for deletion — they read as
   reviewer-facing commentary and go stale the moment the PR merges.
 
+**If this is a RE-REVIEW** (the brief hands you a previous round's findings plus
+the fix diff), your scope is those findings and that diff — NOT the phase again.
+For each prior finding say FIXED / NOT FIXED / FIX INTRODUCED A NEW PROBLEM, and
+check the fix didn't break a caller. You may raise a NEW finding only if it is
+BLOCKING; anything else goes in a `NIT (deferred)` list and is explicitly not a
+reason to run another round. Review rounds are budgeted (2 per phase, after which
+the user has to arbitrate), and re-opening settled code is what exhausts them.
+A finding you already made and the coder rebutted with evidence: engage the
+rebuttal or drop it — do not simply restate the finding.
+
 Return (your final message IS the returned data):
-- Findings by severity, each with file:line and a suggested fix.
+- Findings by severity, each with file:line and a suggested fix. Label each
+  **BLOCKING** (correctness, security, data loss — must not ship) or **NIT**
+  (style, naming, preference — worth saying, never worth a round). The orchestrator
+  bounds the fix loop on those labels, so an unlabelled or inflated finding costs a
+  round that a real bug needed.
 - Leave security to the security reviewers; if you spot a security bug, just note
   it briefly for handoff.
 - EVIDENCE, not assertion: pass or fail, cite what you checked — specific

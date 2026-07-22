@@ -9,7 +9,8 @@ Two protections:
 2. While `.approval-gate` says LOCKED, block BOTH the edit tools on source files
    AND Bash entirely, so an unapproved phase cannot advance. Workflow working docs
    stay editable so the log can be maintained: anything under `.dev-workflow/` plus
-   the doc basenames spec.md / plan.md / phase-log.md / conventions.md.
+   the doc basenames spec.md / plan.md / phase-log.md / conventions.md /
+   project-map.md.
 
 Why LOCKED denies Bash outright, rather than trying to spot the writes:
 `coder` has Bash, and a denylist of write constructs cannot be closed — `>`, tee,
@@ -39,7 +40,8 @@ import re
 import sys
 
 # Doc basenames that are always workflow docs, wherever they live.
-WORKING_DOC_NAMES = {"spec.md", "plan.md", "phase-log.md", "conventions.md"}
+WORKING_DOC_NAMES = {"spec.md", "plan.md", "phase-log.md", "conventions.md",
+                     "project-map.md"}
 STATE_DIR = ".dev-workflow"
 GATE_NAME = ".approval-gate"
 

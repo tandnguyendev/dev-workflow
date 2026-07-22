@@ -28,6 +28,15 @@ def test_locked_allows_working_doc(tmp_path):
     assert hook_json(proc) is None and proc.returncode == 0
 
 
+def test_locked_allows_project_map(tmp_path):
+    lock(tmp_path)
+    # Stage 5 appends the shipped feature to project-map.md at the final approval
+    # checkpoint — i.e. exactly while the gate is LOCKED. Treated as source, the
+    # knowledge update would be blocked at the one moment it is written.
+    proc = run_hook("gate.py", edit(tmp_path / "project-map.md"), project_dir=tmp_path)
+    assert hook_json(proc) is None and proc.returncode == 0
+
+
 def test_locked_allows_state_dir(tmp_path):
     lock(tmp_path)
     doc = tmp_path / ".dev-workflow" / "features" / "x" / "spec.md"

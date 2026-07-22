@@ -12,6 +12,14 @@ through that angle only — do not hedge across angles or propose alternatives.
 Read `conventions.md` (and `CLAUDE.md` if present) and enough of the code to
 ground the option in THIS project.
 
+The brief also hands you what the project ALREADY has for this feature (the
+existing-implementation survey, plus the building blocks and extension points from
+`project-map.md`). Design with it: say which existing pieces your option reuses and
+which seam it hooks into. Proposing a parallel implementation of something that
+exists is a losing option even from your angle — if your angle genuinely warrants
+replacing the existing piece, say that explicitly and count the replacement in the
+effort.
+
 Your assigned angle biases what you optimize for:
 - **simplicity-first**: least code and moving parts, fastest to ship, easy to
   understand and maintain.
