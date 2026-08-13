@@ -35,6 +35,12 @@ Focus on:
   change came from, or argue to you that it's correct; docstrings added to a file
   whose existing functions have none. Flag them for deletion — they read as
   reviewer-facing commentary and go stale the moment the PR merges.
+  A hook already denies the mechanical shapes (AC/plan citations, "we now...",
+  "as requested", and bulk that overshoots the file's density), so what reaches you
+  passed that filter. Yours is the judgement the hook can't make: does this comment
+  say anything the code doesn't already say? Don't assume it's clean because it got
+  written — and don't re-litigate a comment that carries a real constraint or
+  caveat, however wordy.
 
 **If this is a RE-REVIEW** (the brief hands you a previous round's findings plus
 the fix diff), your scope is those findings and that diff — NOT the phase again.

@@ -148,6 +148,27 @@ Silent until a phase has a real `- Scope:` (the scaffolded plan is not a plan), 
 </details>
 
 <details>
+<summary><b>💬 Comment guard</b> — how it works</summary>
+
+<br>Agents write comments *at the reviewer*: which acceptance criterion the line satisfies, what the code used to do, why it's correct. All of it is true on the day of the review and dead weight the moment the PR merges. The rule against it shipped in four documents and still drifted, because prose is the one enforcement layer a model can talk itself past.
+
+A `PreToolUse` hook (`hooks/comment_guard.py`) denies the edit on two deterministic checks, both applied **only to comment lines the edit adds** — a comment merely carried through an edit's context is never blamed for it:
+
+- **Noise patterns** — workflow artifacts (`AC-2`, `plan.md`, `Phase 3:`), diff narration (`we now…`, `Added a helper…`, `Previously this…`), reviewer-facing talk (`as requested`, `this ensures…`). Deliberately narrow: `# phase 2 of the TLS handshake` passes, `# Phase 2: wire the parser` does not.
+- **Density** — comment lines added are capped by the file's *own* comments-per-code ratio. It self-calibrates, which is the only way to enforce "match the file's existing comment density" at all: the same block lands in a heavily commented file and is refused in a terse one. New files are measured against their siblings; module docstrings and licence headers are not charged.
+
+Python docstrings count. `.md` / `.json` / `.yaml` and everything under `.dev-workflow/` are out of scope.
+
+**What it can and cannot check.** It catches *mechanical* shapes only — it cannot tell whether a comment earns its line, and one that tried would delete good comments. That judgement stays with `code-reviewer` and with you. Denial is safe in a way a `Stop` hook's refusal is not: deleting the comment is always an available move, so it can't trap a turn and needs no give-up bound.
+
+Off with `DEV_WORKFLOW_COMMENT_GUARD=off`, or per-project via `.dev-workflow/comment-guard.json`:
+
+```json
+{ "enabled": true, "allow": ["phase \\d of the handshake"], "density": { "floor": 4, "min_ratio": 0.25 } }
+```
+</details>
+
+<details>
 <summary><b>♻️ Context re-injection</b> — how it works</summary>
 
 <br>A `SessionStart` hook (`hooks/status.py`) re-surfaces the active feature, phase progress, and gate state at every session start — **including after `/compact` or auto-compaction** (it fires with `source: "compact"` and adds a "context was just compacted — re-read the files" reminder). This keeps the file-based source of truth (`spec.md` / `plan.md` / `phase-log.md`) from being lost to context rot.

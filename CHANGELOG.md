@@ -5,6 +5,41 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Comment discipline now has a hook behind it.** 0.7.0 made the rule explicit in
+  four documents and it still drifted — comments citing acceptance criteria,
+  quoting `plan.md`, narrating the diff and arguing correctness at the reviewer
+  kept shipping, because prose is the one enforcement layer a model can talk itself
+  past. Every other load-bearing rule here has a hook (`gate.py`,
+  `evidence_guard.py`, `plan_guard.py`); this one now does too.
+  `hooks/comment_guard.py` runs `PreToolUse` on every edit tool and denies the
+  write on two deterministic checks, both applied ONLY to comment lines the edit
+  ADDS — a comment merely carried through an edit's context is never blamed, since
+  the coder has no compliant move there:
+  - **Noise patterns** — workflow artifacts (`AC-2`, `plan.md`, `Phase 3:`), diff
+    narration (`we now...`, `Added a helper...`, `Previously this...`), and
+    reviewer-facing talk (`as requested`, `this ensures...`, `addresses the review
+    finding`). Deliberately narrow: it catches the mechanical shapes and leaves
+    every judgement call to `code-reviewer`, because a guard that cries wolf gets
+    configured off. `# phase 2 of the TLS handshake` passes; `# Phase 2: wire the
+    parser` does not.
+  - **Density** — comment lines added are capped by the file's OWN comments-per-code
+    ratio, which is the only way to enforce "match the file's existing comment
+    density" at all. It self-calibrates: the same block lands in a heavily
+    commented file and is refused in a terse one. A new file is measured against
+    its siblings; a module docstring or licence header is not charged.
+  Python docstrings count (a file whose functions all grew one is the noise this
+  exists to stop), `.md`/`.json`/`.yaml` and everything under `.dev-workflow/` are
+  out of scope, and an unterminated triple quote is treated as code so a multi-line
+  SQL string cannot make the rest of the file read as comments. Escape hatches:
+  `DEV_WORKFLOW_COMMENT_GUARD=off`, or `.dev-workflow/comment-guard.json` with
+  `enabled`, an `allow` regex list, and `density` overrides — a malformed config
+  falls back to the defaults rather than failing open. Denial is safe here in a way
+  a Stop hook's refusal is not: deleting the comment is always available, so it
+  cannot trap a turn and needs no refusal budget.
+
 ## [0.8.1] - 2026-07-22
 
 Three hook gaps, each found by running the hooks exactly as Claude Code runs them

@@ -49,6 +49,9 @@ fallback. It applies on top of the conventions above, in every project.*
 - Handle only errors that can actually occur here.
 - Comment only what the code can't say itself; never narrate the change or
   justify it to the reviewer. Match the file's existing comment density.
+  (Enforced by a hook, which denies the edit. Turn it off for this project with
+  `.dev-workflow/comment-guard.json` -> `{"enabled": false}`, or exempt a
+  domain phrase with `{"allow": ["<regex>"]}`.)
 - Before adding anything beyond the literal request, STOP and ask — default to less.
 
 ## Domain-specific correctness rules

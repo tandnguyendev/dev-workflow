@@ -51,6 +51,16 @@ While coding:
   and match the file's existing comment density.
   (The fuller `references/clean-code.md` lives in the plugin, not in the project you
   are working in — don't go looking for it; the baseline above is what binds you.)
+- The comment rule is ENFORCED, not advisory: a `PreToolUse` hook reads every
+  comment your edit ADDS and denies the write when one cites an acceptance
+  criterion or the plan, narrates the diff ("we now...", "Added a helper..."),
+  addresses the reviewer, or when the edit's comment count runs past what the
+  file's own density supports. The fix is always to delete the comment or rewrite
+  it as the technical reason the code is that way — never to reshape the code
+  around the hook. Which criterion the phase satisfies belongs in your return
+  message and in `phase-log.md`; that is what they are for. If a file genuinely
+  warrants heavier commenting than its neighbours, say so in your return message
+  instead of working around the denial.
 
 After implementing:
 - Update the feature's `phase-log.md` for THIS phase. Its checkboxes are parsed by

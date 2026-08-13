@@ -31,6 +31,7 @@ codebase's established style.
   from, or argue that it is correct: that is talk for the reviewer, and it is
   noise the moment the PR merges. Match the surrounding code's comment density;
   don't docstring every function in a file that has none. Keep them accurate or
-  delete them.
+  delete them. This one is enforced by `hooks/comment_guard.py`, which denies the
+  edit outright — see its docstring for the exact shapes and the escape hatches.
 - Let the formatter own whitespace/quotes/semicolons — don't hand-format.
 - Tests cover the new behavior plus at least one edge/failure case.
