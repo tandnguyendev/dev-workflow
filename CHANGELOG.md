@@ -5,6 +5,20 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-08-13
+
+### Fixed
+- **The comment guard's refusal pointed outside-workflow agents at files that do
+  not exist.** It denied with "belongs in your return message to the orchestrator
+  and in `phase-log.md`" on every edit — but the guard runs always, not only
+  inside a feature, so most of the time it is read by an agent chatting directly
+  with the user, where there is no orchestrator and no phase log. The refusal now
+  names `phase-log.md` only when `.dev-workflow/active` resolves to a real feature
+  directory, and otherwise says the change-talk belongs in the message to the user
+  or in the commit message. A dangling `active` slug (feature deleted or renamed)
+  counts as outside. The density refusal's "say so in your return message" lost
+  the same assumption.
+
 ## [0.9.0] - 2026-08-13
 
 ### Added
