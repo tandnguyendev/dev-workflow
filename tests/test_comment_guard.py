@@ -125,6 +125,35 @@ def test_noise_in_a_c_block_comment_is_denied(tmp_path):
     assert denied(proc)
 
 
+def test_refusal_names_phase_log_only_inside_an_active_feature(tmp_path):
+    # The guard runs on every edit, so most of the time it is read by an agent with
+    # no orchestrator and no phase-log. Naming them anyway sends it to a file that
+    # does not exist.
+    src = tmp_path / "src.py"
+    src.write_text("def f():\n    return 1\n")
+    payload = edit(src, "def f():\n    # AC-3: return two\n    return 2\n")
+
+    outside = reason(run(payload, tmp_path))
+    assert "phase-log.md" not in outside and "orchestrator" not in outside
+    assert "commit message" in outside
+
+    feature = tmp_path / ".dev-workflow" / "features" / "checkout"
+    feature.mkdir(parents=True)
+    (tmp_path / ".dev-workflow" / "active").write_text("checkout\n")
+    assert "phase-log.md" in reason(run(payload, tmp_path))
+
+
+def test_a_dangling_active_slug_does_not_name_phase_log(tmp_path):
+    # `.dev-workflow/active` outliving its feature dir is the state a deleted or
+    # renamed feature leaves behind; the file it points at is gone either way.
+    src = tmp_path / "src.py"
+    src.write_text("def f():\n    return 1\n")
+    (tmp_path / ".dev-workflow").mkdir()
+    (tmp_path / ".dev-workflow" / "active").write_text("deleted-feature\n")
+    out = reason(run(edit(src, "def f():\n    # AC-3: return two\n    return 2\n"), tmp_path))
+    assert "phase-log.md" not in out
+
+
 # --- scope ------------------------------------------------------------------
 
 def test_markdown_and_data_files_are_out_of_scope(tmp_path):

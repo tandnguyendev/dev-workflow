@@ -386,6 +386,19 @@ def in_state_dir(path, root):
         return False
 
 
+def where_it_belongs(root):
+    """Where the change-talk this guard rejects should go instead.
+
+    The guard runs on every edit, not just inside a feature, so it is routinely
+    read by an agent with no orchestrator and no phase-log — pointing that agent
+    at `phase-log.md` sends it to a file that does not exist."""
+    active = read(os.path.join(root, STATE_DIR, "active"))
+    slug = next((l.strip() for l in (active or "").splitlines() if l.strip()), "")
+    if slug and os.path.isdir(os.path.join(root, STATE_DIR, "features", slug)):
+        return "your return message to the orchestrator and in phase-log.md"
+    return "your message to the user, or in the commit message"
+
+
 def main():
     try:
         payload = json.load(sys.stdin)
@@ -416,6 +429,7 @@ def main():
         sys.exit(0)
 
     name = os.path.basename(path)
+    elsewhere = where_it_belongs(root)
     total_comments, total_code = 0, 0
     for new_text, old_text, charge_header in pieces:
         if not new_text.strip():
@@ -434,9 +448,9 @@ def main():
                         "A comment earns its line only by saying something the code "
                         "cannot: a constraint, a non-obvious reason, a caveat. Talk "
                         "about the change — which criterion it satisfies, what it "
-                        "used to do, why it is correct — belongs in your return "
-                        "message to the orchestrator and in phase-log.md, not in the "
-                        "file, where it goes stale the moment the PR merges.\n"
+                        f"used to do, why it is correct — belongs in {elsewhere}, "
+                        "not in the file, where it goes stale the moment the PR "
+                        "merges.\n"
                         "Delete it, or rewrite it as the technical reason the code "
                         "is written this way, and retry the edit."
                     )
@@ -465,7 +479,7 @@ def main():
         "reason, a caveat). Drop the ones that restate the code or explain the "
         "change, keep the few that carry real information, and retry.\n"
         "If this file genuinely warrants heavier commenting than its neighbours, "
-        "say so in your return message rather than working around this."
+        "say so rather than quietly working around this."
     )
 
 
