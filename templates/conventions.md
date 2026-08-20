@@ -37,6 +37,28 @@ open only when a task needs them. (This note stays; the guidance blockquotes go.
 > coder runs these and the reviewer enforces them. Objective tooling beats prose.
 > (Greenfield with no conventions yet? Start from `references/clean-code.md`.)
 
+## Testing
+> The EXACT test command, and the harness for proving store/external behaviour for
+> real (an in-memory server, a container, a fixture DB) — name it even if nothing
+> uses it yet, because an agent that cannot see it will mock instead. Then how a
+> subject is built in a test (a testing module, a named factory — never positional
+> `as any` blanks). Anything else this project wants enforced.
+
+## Testing contract (always applies)
+*This section stays verbatim — it is not project-specific and is not a fallback.*
+- Test at the boundary where the risk lives. Correctness that depends on the store
+  or an external system — atomicity, uniqueness, indexes, transactions, real filter
+  semantics — is proven against the real thing, not a mock of it. A fake that
+  stands in for the risky call proves nothing about it and reports it as covered.
+  Faking a collaborator to INJECT an otherwise unreachable failure is fine.
+- Pure logic gets a plain unit test: no DI, no mocks.
+- Nothing else gets a test. A behaviour that is a declaration — a validator
+  annotation, a schema field, a config constant, a type — is already enforced by
+  the type-checker, the linter or the framework; a test restating it cannot fail.
+- Build the subject by NAME, never positionally out of empty placeholders.
+  (The last two shapes are enforced by a hook. Turn it off for this project with
+  `.dev-workflow/test-guard.json` -> `{"enabled": false}`.)
+
 ## Simplicity contract (always applies)
 *This section stays verbatim — it is not project-specific and is not a
 fallback. It applies on top of the conventions above, in every project.*
@@ -47,11 +69,16 @@ fallback. It applies on top of the conventions above, in every project.*
 - Match existing patterns; don't add libraries or layers the codebase doesn't
   already use.
 - Handle only errors that can actually occur here.
-- Comment only what the code can't say itself; never narrate the change or
-  justify it to the reviewer. Match the file's existing comment density.
-  (Enforced by a hook, which denies the edit. Turn it off for this project with
-  `.dev-workflow/comment-guard.json` -> `{"enabled": false}`, or exempt a
-  domain phrase with `{"allow": ["<regex>"]}`.)
+- Default to NO comment: when a line needs explaining, fix the code first (a
+  clearer name, a smaller function, a named constant). A comment earns its line
+  only by stating a constraint the code cannot, a reason the obvious approach is
+  wrong here, or a caveat with real consequences. Never narrate the change or
+  justify it to the reviewer.
+  (Enforced by a hook, which denies the edit: a file with no comments grants ONE
+  comment line, and more has to be earned from the file's own density. Turn it off
+  for this project with `.dev-workflow/comment-guard.json` -> `{"enabled": false}`,
+  loosen it with `{"density": {"floor": 4, "min_ratio": 0.25}}`, or exempt a domain
+  phrase with `{"allow": ["<regex>"]}`.)
 - Before adding anything beyond the literal request, STOP and ask — default to less.
 
 ## Domain-specific correctness rules

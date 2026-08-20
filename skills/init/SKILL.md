@@ -32,6 +32,17 @@ the lean budget is protecting.
      them (e.g. `ruff check`, `npm run lint`, `gofmt -l`, `cargo fmt`) plus the
      test command, and any naming/error-handling patterns the code already
      follows. These are what the coder runs and the reviewer enforces.
+   - **Detect the testing setup, including what is installed but unused.** The
+     runner and its exact command; how existing tests build a subject (a testing
+     module, a factory, positional constructor calls); and — the part that gets
+     missed — whether a harness for proving store/external behaviour FOR REAL is
+     already a dependency (an in-memory server such as `mongodb-memory-server`,
+     Testcontainers, a fixture DB, a fake HTTP server). Grep the manifest, not just
+     the test files: these are routinely installed and then used in one file out of
+     fifty, and an agent that cannot see the harness mocks the database instead and
+     writes a test that cannot fail. Record it by name in `conventions.md` even
+     when nothing currently uses it. If there is none, say that too — "no real-store
+     harness; add one before claiming store behaviour in a test" is a useful line.
    - **Survey what the project already DOES**, not just how it is written — this
      is the part agents are missing today, and it is why they propose rebuilding
      something that exists. Enumerate the capabilities from the surfaces that
@@ -44,12 +55,13 @@ the lean budget is protecting.
    - If a `CLAUDE.md` already exists, read it and reuse its content — do not
      duplicate or overwrite it; complement it.
 2. Draft `conventions.md` using the section structure from the plugin template
-   (Domain / Tech stack / Architecture / Coding conventions / Simplicity contract
-   / Domain-specific correctness rules / Security focus / Workflow files). Fill
-   each section from what you observed; mark anything uncertain as an assumption.
-   Copy the **Simplicity contract** section verbatim from the template in BOTH
-   paths (observed project conventions and greenfield default) — it is a standing
-   constraint, not a fallback baseline. Never rephrase, soften, or drop it.
+   (Domain / Tech stack / Architecture / Coding conventions / Testing / Testing
+   contract / Simplicity contract / Domain-specific correctness rules / Security
+   focus / Workflow files). Fill each section from what you observed; mark anything
+   uncertain as an assumption. Copy the **Simplicity contract** and **Testing
+   contract** sections verbatim from the template in BOTH paths (observed project
+   conventions and greenfield default) — they are standing constraints, not
+   fallback baselines. Never rephrase, soften, or drop them.
 3. Draft `project-map.md` using the plugin template's sections (Module map /
    Existing features / Shared building blocks / Extension points / Known gotchas
    / Glossary). Fill it from the survey in step 1.

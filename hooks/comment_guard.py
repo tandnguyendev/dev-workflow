@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """PreToolUse comment guard for the dev-workflow plugin.
 
-The comment rule ("comment only what the code cannot say itself; never narrate the
-change or justify it to the reviewer; match the file's existing comment density")
-shipped in four places as PROSE — `references/clean-code.md`, `agents/coder.md`,
+The comment rule ("default to NO comment; a comment is an exception that has to
+earn its line; never narrate the change or justify it to the reviewer") shipped in
+four places as PROSE — `references/clean-code.md`, `agents/coder.md`,
 `agents/code-reviewer.md`, `templates/conventions.md` — and prose is the one
 enforcement layer a model can talk itself past. Every other load-bearing rule in
 this plugin has a hook behind it (gate.py, evidence_guard.py, plan_guard.py); this
@@ -20,11 +20,12 @@ Two deterministic checks, both applied ONLY to comment lines the edit ADDS:
    `code-reviewer`. A guard that cries wolf gets configured off, and then guards
    nothing.
 
-2. DENSITY — the number of comment lines added is capped by the file's OWN existing
-   comment density. This is the only check that can enforce "match the file's
-   existing comment density" at all, and it is self-calibrating: a heavily-commented
-   file (this one, say) grants a generous budget, a terse file grants almost none.
-   No fixed ratio could do that without being wrong for one of the two.
+2. DENSITY — the number of comment lines added is capped at FLOOR plus the file's
+   OWN existing comment density. The default posture is no comment, so a file with
+   none grants exactly the floor: one line, for the caveat that genuinely cannot be
+   said any other way. A file that does comment keeps granting its own ratio, which
+   is what stops the rule from being wrong on a codebase that documents heavily —
+   no fixed ratio could serve both.
 
 Scope: files whose extension has a known comment syntax (so .md/.json/.yaml and
 every data format are untouched), outside `.dev-workflow/`. Pre-existing comment
@@ -40,7 +41,7 @@ Escape hatches, for the project that genuinely disagrees:
   DEV_WORKFLOW_COMMENT_GUARD=off        (env)
   .dev-workflow/comment-guard.json      {"enabled": false}
                                         {"allow": ["<regex>", ...]}
-                                        {"density": {"floor": 3, "min_ratio": 0.25}}
+                                        {"density": {"floor": 3, "min_ratio": 0.2}}
 """
 import json
 import math
@@ -138,16 +139,12 @@ NOISE = [
 NOISE = [(re.compile(p, re.IGNORECASE), why) for p, why in NOISE]
 
 # --- density defaults -------------------------------------------------------
-# FLOOR: comment lines any edit may add regardless of ratio. Set to the length of
-# one honest WHY paragraph, because on a small edit the ratio term is tiny and the
-# floor is the whole budget — at 3, a four-line explanation of something genuinely
-# subtle was denied on a five-line change, which is the kind of false positive that
-# gets a guard configured off. Bulk noise is what density is for; single misplaced
-# comments are the pattern check's job.
-FLOOR = 4
-# MIN_RATIO: the allowance a comment-FREE file still grants. Without it, density
-# would be a total ban on the first comment in a bare file.
-MIN_RATIO = 0.25
+# The default posture is NO comment, so FLOOR is the single line that survives it:
+# a genuinely necessary caveat is never blocked by arithmetic alone, and nothing
+# past it comes free. MIN_RATIO is what a comment-FREE file grants on top — zero,
+# so a terse file stays terse while a file that genuinely comments keeps its ratio.
+FLOOR = 1
+MIN_RATIO = 0.0
 # Below this many real lines a file's own density is noise, not a style signal
 # (a 4-line file with 1 comment does not "have" a 25% convention).
 MIN_BASELINE = 20

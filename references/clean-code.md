@@ -26,12 +26,25 @@ codebase's established style.
 - Handle errors explicitly; fail loudly on invalid input, never swallow silently.
 - No dead code, commented-out blocks, or unused symbols.
 - Keep public surfaces small; expose the minimum needed.
-- Comment only what the code cannot say itself — a constraint, a non-obvious
-  reason, a caveat. Never narrate the next line, explain where a change came
-  from, or argue that it is correct: that is talk for the reviewer, and it is
-  noise the moment the PR merges. Match the surrounding code's comment density;
-  don't docstring every function in a file that has none. Keep them accurate or
-  delete them. This one is enforced by `hooks/comment_guard.py`, which denies the
-  edit outright — see its docstring for the exact shapes and the escape hatches.
+- **Default to NO comment.** The code is the documentation. When you feel the urge
+  to explain a line, the fix is almost always in the code — a clearer name, a
+  smaller function, an early return, a named constant instead of a literal — and
+  reaching for the comment instead leaves both the confusing code and a line that
+  will go stale. Write the comment only after the code-level fix genuinely isn't
+  available.
+- A comment is an EXCEPTION that has to earn its line, and only three things do:
+  a constraint the code cannot state (an external contract, a protocol quirk, a
+  hardware or vendor behaviour), a reason the obvious implementation is wrong
+  *here*, or a caveat with real consequences for whoever edits next. A pointer to
+  the issue or spec behind a workaround counts as the second. If you have to think
+  about whether it qualifies, it does not.
+- Never narrate the next line, explain where a change came from, or argue that it
+  is correct: that is talk for the reviewer, and it is noise the moment the PR
+  merges. Never docstring a file whose functions have none. Keep the few comments
+  that exist accurate, or delete them.
+- Enforced by `hooks/comment_guard.py`, which denies the edit outright: a
+  comment-free file grants ONE comment line, and anything beyond that has to be
+  earned from the file's own density — see its docstring for the exact shapes and
+  the escape hatches.
 - Let the formatter own whitespace/quotes/semicolons — don't hand-format.
 - Tests cover the new behavior plus at least one edge/failure case.

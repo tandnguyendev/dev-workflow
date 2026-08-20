@@ -46,21 +46,26 @@ While coding:
   genuine conflict, precedence is: linter/formatter > `conventions.md` >
   surrounding style > baseline; absent a conflict the baseline holds. Baseline:
   clarity over cleverness; intent-revealing names; small single-purpose functions
-  with early returns; explicit error handling; no dead code; comment only what the
-  code can't say itself — never narrate the change or justify it to the reviewer,
-  and match the file's existing comment density.
+  with early returns; explicit error handling; no dead code; **default to NO
+  comment** — when you want to explain a line, fix the code instead (a clearer
+  name, a smaller function, a named constant), and write the comment only when
+  that isn't available. A comment earns its line only by stating a constraint the
+  code cannot, a reason the obvious approach is wrong here, or a caveat with real
+  consequences. Never narrate the change or justify it to the reviewer.
   (The fuller `references/clean-code.md` lives in the plugin, not in the project you
   are working in — don't go looking for it; the baseline above is what binds you.)
 - The comment rule is ENFORCED, not advisory: a `PreToolUse` hook reads every
   comment your edit ADDS and denies the write when one cites an acceptance
   criterion or the plan, narrates the diff ("we now...", "Added a helper..."),
   addresses the reviewer, or when the edit's comment count runs past what the
-  file's own density supports. The fix is always to delete the comment or rewrite
-  it as the technical reason the code is that way — never to reshape the code
-  around the hook. Which criterion the phase satisfies belongs in your return
-  message and in `phase-log.md`; that is what they are for. If a file genuinely
-  warrants heavier commenting than its neighbours, say so in your return message
-  instead of working around the denial.
+  file's own density supports. **A file with no comments grants exactly one**, so
+  budget accordingly: if an edit has more than one thing that needs saying, that is
+  usually the code asking to be clearer, not the budget being wrong. The fix is
+  always to delete the comment or rewrite it as the technical reason the code is
+  that way — never to reshape the code around the hook. Which criterion the phase
+  satisfies belongs in your return message and in `phase-log.md`; that is what they
+  are for. If a file genuinely warrants heavier commenting than its neighbours, say
+  so in your return message instead of working around the denial.
 
 After implementing:
 - Update the feature's `phase-log.md` for THIS phase. Its checkboxes are parsed by
@@ -70,8 +75,11 @@ After implementing:
     command and its result, `file:line` for the cases you verified. What it must
     prove is the phase's `Done when:` from the brief (the acceptance criteria this
     phase delivers): one artifact per criterion, so "ran the tests" is not enough if
-    a criterion has no artifact pointing at it. Never write "looks fine" or leave
-    the placeholder; a Stop hook refuses an empty ledger.
+    a criterion has no artifact pointing at it. An artifact is whatever would have
+    caught the criterion being wrong — a type-check, a command run against the real
+    thing, a `file:line` where it is now true by construction, one test covering
+    several criteria — NOT necessarily a new test each (see Tests below). Never
+    write "looks fine" or leave the placeholder; a Stop hook refuses an empty ledger.
   - **Do NOT tick `[x] code-reviewed`, `[x] security-scanned`, or `[x] USER
     APPROVED`.** Those belong to the reviewers and the user. Ticking
     `code-reviewed` yourself would mark your own code reviewed, which is exactly
@@ -79,6 +87,36 @@ After implementing:
     user's sign-off.
 - Run existing tests/build if a command is available; report results honestly. If
   they fail, say so — a red suite reported as green is worse than no suite.
+
+**Tests.** The evidence ledger pushes hard toward writing one test per criterion.
+Resist it: the ledger wants proof, and a test is only one kind of proof. Follow
+`conventions.md`'s Testing section where the project has one; absent that, three
+rules, applied in order.
+
+1. **Test at the boundary where the risk actually lives.** If a behaviour's
+   correctness depends on the store or an external system — atomicity, uniqueness,
+   an index, a transaction, a filter's real semantics — prove it against the real
+   thing. Look in `package.json`/lockfile first: an in-memory server or container
+   harness is usually already a dependency. A `jest.fn()` standing in for the risky
+   call proves nothing about it: a fake counter incrementing in one thread passes
+   "never yields a duplicate" forever, including after the real atomic operator is
+   deleted from the code. Faking a collaborator to INJECT a failure you cannot
+   otherwise reach (a driver's duplicate-key error) is the legitimate case.
+2. **Pure logic gets a plain unit test** — no DI, no mocks. Decoders, math,
+   formatting, parsing, state machines.
+3. **Everything else gets no test.** A criterion satisfied by a declaration — a
+   validator annotation, a schema field, a config constant, a type — is already
+   checked by the type-checker, the linter or the framework. A test asserting that
+   `@Max(100)` rejects 101 restates the annotation and changes with it; it cannot
+   fail. Cite the declaration in the ledger and say you skipped the test, so the
+   orchestrator and the user see a decision instead of a gap.
+
+However you build the subject, bind its dependencies BY NAME — the framework's
+testing module, or a factory in the file. A provider assembled positionally out of
+`{} as any` blanks stops testing anything the moment a constructor parameter moves,
+and stays green while it does. A `PreToolUse` hook denies that shape, and denies a
+test block with no assertion at all; the fix is never to reshape the test around
+the hook.
 - STOP. Do not review yourself or start the next phase. Return a concise diff
   summary so the orchestrator can dispatch reviewers.
 

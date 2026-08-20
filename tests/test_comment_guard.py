@@ -215,12 +215,35 @@ def test_the_same_block_is_allowed_on_a_heavily_commented_file(tmp_path):
     assert hook_json(run(edit(src, new), tmp_path)) is None
 
 
-def test_a_few_comments_always_pass(tmp_path):
-    # A floor, so a real caveat on a two-line fix is never blocked by arithmetic.
+def test_one_necessary_caveat_still_passes_on_a_terse_file(tmp_path):
+    # The floor, and all of it: the default is no comment, so what survives is the
+    # single line for something that genuinely cannot be said any other way.
     src = tmp_path / "src.py"
     src.write_text(TERSE)
     new = "def g():\n    # The vendor SDK mutates this in place.\n    return 1\n"
     assert hook_json(run(edit(src, new), tmp_path)) is None
+
+
+def test_a_second_comment_line_on_a_terse_file_is_denied(tmp_path):
+    # Where "default to no comment" actually bites. Two lines used to be free.
+    src = tmp_path / "src.py"
+    src.write_text(TERSE)
+    new = ("def g():\n"
+           "    # The vendor SDK mutates this in place.\n"
+           "    # So the caller's copy is already updated.\n"
+           "    return 1\n")
+    assert denied(run(edit(src, new), tmp_path))
+
+
+def test_a_terse_file_grants_nothing_beyond_the_floor_however_big_the_edit(tmp_path):
+    # No min_ratio: a large edit to a comment-free file does not earn a paragraph.
+    src = tmp_path / "src.py"
+    src.write_text(TERSE)
+    new = ("def g():\n"
+           + "".join(f"    # explanation line {i}\n" for i in range(3))
+           + "".join(f"    step{i} = {i}\n" for i in range(40))
+           + "    return 1\n")
+    assert denied(run(edit(src, new), tmp_path))
 
 
 def test_new_file_header_is_not_charged(tmp_path):

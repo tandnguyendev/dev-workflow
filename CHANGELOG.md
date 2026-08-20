@@ -5,6 +5,76 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **The comment rule's default is now NO comment.** It previously read "comment
+  only what the code cannot say itself, and match the file's density", which still
+  granted every edit a free paragraph: the guard's floor was 4 comment lines
+  regardless of ratio, and a comment-free file still granted 25%. Between them,
+  four lines of commentary landed in a bare file on every edit and never reached
+  the density check at all. The floor is now **1** and the comment-free allowance
+  **0**, so a file with no comments grants exactly one line per edit however large
+  the edit — the caveat that genuinely cannot be said any other way — and anything
+  beyond that has to be earned from the file's own density, which keeps the rule
+  from being wrong on a codebase that documents heavily.
+
+  The prose moved with it in all four places (`references/clean-code.md`,
+  `agents/coder.md`, `agents/code-reviewer.md`, `templates/conventions.md`): the
+  first move when a line needs explaining is to fix the CODE — a clearer name, a
+  smaller function, a named constant — and a comment is an exception that earns its
+  line only by stating a constraint the code cannot, a reason the obvious approach
+  is wrong here, or a caveat with real consequences. `code-reviewer` now treats
+  every comment in a diff as a finding that must justify itself, and when a comment
+  explains confusing code the finding is the code, not the comment.
+
+  Projects that want the old behaviour back:
+  `.dev-workflow/comment-guard.json` -> `{"density": {"floor": 4, "min_ratio": 0.25}}`.
+
+### Added
+- **The workflow no longer converts acceptance criteria into tests one-for-one.**
+  The evidence gate is the strongest incentive in the plugin — a turn cannot end
+  until `- Evidence:` cites an artifact per criterion — and the cheapest artifact
+  to manufacture is a new test. So criteria became tests one-for-one regardless of
+  whether they had logic worth testing, and the tests came out shaped to be CITED
+  rather than able to FAIL. Stage 4 now says plainly that an artifact is not the
+  same thing as a new test (a type-check, a command run against the real thing, a
+  `file:line` where the constraint holds by construction, one test covering several
+  criteria all qualify), that a criterion satisfied by a declaration — a validator
+  annotation, a schema field, a config constant, a type — must NOT get a test that
+  can only restate it, and that skipping one is recorded in the ledger as a
+  decision. Stage 3 asks the plan to name the proof rather than budget a test.
+- **`coder` has testing rules for the first time.** It previously had none: the
+  agent was told to run existing tests and nothing about when a test is worth
+  writing or how to build one. Three rules, applied in order — prove store and
+  external behaviour against the real thing (checking the manifest for a harness
+  first, since one is usually already installed); pure logic gets a plain unit test
+  with no DI and no mocks; everything else gets no test. Dependencies are bound by
+  NAME, never positionally out of `{} as any` blanks.
+- **`code-reviewer` reviews the tests.** The agent definition did not contain the
+  word "test". It now owns the judgement no hook can make — a test that mocks the
+  risk it claims to prove, a test that restates a declaration, a test that cannot
+  fail — and is explicitly authorized to recommend DELETING a test, while still
+  flagging the opposite failure of a criterion with no artifact behind it.
+- **`conventions.md` gained a Testing section and a verbatim Testing contract**,
+  and `/dev-workflow:init` now detects the testing setup — including a real-store
+  harness that is installed but unused, which is the common case and the reason an
+  agent mocks the database instead of using it.
+- **`hooks/test_guard.py`** (`PreToolUse`) backs the two shapes that need no
+  judgement, on test files only and only on what an edit adds: a provider built
+  from three or more positional `as any` blanks, and a test block with no assertion
+  (named assertion helpers count as asserting). Off with
+  `DEV_WORKFLOW_TEST_GUARD=off` or `.dev-workflow/test-guard.json`.
+
+  Deliberately NOT hooked: "the test mocks the risk it claims to prove". Two
+  designs were measured against 93 real test files — block-scoped detection missed
+  every true positive because the fake is built in a factory outside the block, and
+  file-scoped detection reached roughly half false positives because the claim
+  lives in English ("a unique payer+amount candidate" is in-process wording, and a
+  fake that throws is the only way to reach a driver duplicate-key error at all).
+  That call needs the subject read beside the test, so it stays with
+  `code-reviewer`.
+
 ## [0.9.1] - 2026-08-13
 
 ### Fixed

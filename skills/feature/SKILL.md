@@ -257,6 +257,10 @@ Reads, not a subagent.
      with no way to verify it is a planning bug. Its `Done when:` comes from the
      acceptance criteria in `spec.md` section 1b; between them, the phases must
      cover every criterion, and a criterion no phase delivers is a missing phase.
+     Name the proof, not a test count: for a criterion a declaration or the
+     type-checker already enforces, the honest plan says so instead of budgeting a
+     test that can only restate it (see "One artifact per criterion is NOT one test
+     per criterion" in Stage 4).
    - **Each phase has a rollback point.** Note where the checkpoint sits so a bad
      phase can be reverted cleanly (ties into the checkpoint/rollback machinery).
    - **Reuse before rebuild.** Name, per phase, the existing building block or
@@ -344,7 +348,8 @@ For each phase in `plan.md`, in order:
    - **Augment the `- Evidence:` ledger** so it carries CITED proof it works:
      test/command output, `file:line` refs, concrete cases verified — one artifact
      per acceptance criterion this phase delivers (`spec.md` section 1b), no
-     "looks fine". Ticking `[x] code-reviewed` arms the
+     "looks fine". **An artifact is not the same thing as a new test** — see below.
+     Ticking `[x] code-reviewed` arms the
      `Stop`-hook evidence gate: it will refuse to let you yield for approval while
      this line is still empty or a placeholder, and it will keep refusing.
 4. **CHECKPOINT: the user reviews AFTER the AI. Stop and wait.** ONLY after the user
@@ -352,6 +357,44 @@ For each phase in `plan.md`, in order:
    Never tick it yourself to advance; never advance unapproved.
 5. If it's a git repo and the user wants per-phase commits, commit scoped to this
    phase (`Phase N: <title>`). Skip otherwise. Keeps the final-audit diff clean.
+
+### One artifact per criterion is NOT one test per criterion
+The evidence rule above is the strongest incentive in this workflow: the gate will
+not let the turn end without a citable artifact, and the cheapest artifact to
+manufacture is a new test. Left alone, that turns "2–5 acceptance criteria" into
+"2–5 new test files", whether or not the criteria have any logic worth testing —
+and the tests it produces are shaped to be CITED, not to be able to fail. A ledger
+reading `criterion 1 → x.spec.ts:123, criterion 2 → :135, criterion 3 → :160` is
+that failure, not a sign of rigour.
+
+**An artifact is anything that would have caught the criterion being wrong.** A
+type-check or build that could not have passed otherwise, the command you ran
+against the real thing and its output, a `file:line` where the constraint is now
+enforced by construction, a log line from an actual run, one test that covers
+several criteria at once. Cite the cheapest artifact that would actually fail.
+
+**Some criteria must NOT get a test, and saying so is part of the job.** A
+criterion satisfied by a declaration — a validator annotation, a schema field, a
+config value, a type — is already checked by the linter, the type-checker or the
+framework, and a test that asserts `@Max(100)` rejects 101 only restates the
+annotation: it cannot fail unless someone edits the annotation, in which case it
+changes with it. Cite the declaration and the type-check; do not write the test.
+When you skip one, say which criterion and why in the ledger, so the user sees a
+decision rather than a gap.
+
+**A test that mocks the thing it claims to prove is worse than no test**, because
+it reports the risk as covered. Atomicity, uniqueness, index and transaction
+behaviour live in the store: a fake counter that increments in one thread passes
+"never yields a duplicate" forever, including after the real atomic operator is
+deleted. If the criterion rests on the store, prove it against a real one — most
+projects already ship a harness for this (check `package.json` before assuming
+otherwise) — or narrow the claim to what a fake CAN prove: that the code sends the
+right query. Faking a collaborator to INJECT a failure you cannot otherwise reach
+is the legitimate case, and stays legitimate.
+
+Two of these shapes are hook-enforced on write (`test_guard.py`: a provider built
+from positional `as any` blanks, a test block that asserts nothing). The rest is
+`code-reviewer`'s, and it is authorized to say a test should be DELETED.
 
 ### The review loop is BOUNDED — at most 2 fix rounds, then the user decides
 A coder and a reviewer left alone will argue indefinitely: the reviewer keeps

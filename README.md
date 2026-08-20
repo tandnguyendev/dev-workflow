@@ -150,21 +150,40 @@ Silent until a phase has a real `- Scope:` (the scaffolded plan is not a plan), 
 <details>
 <summary><b>💬 Comment guard</b> — how it works</summary>
 
-<br>Agents write comments *at the reviewer*: which acceptance criterion the line satisfies, what the code used to do, why it's correct. All of it is true on the day of the review and dead weight the moment the PR merges. The rule against it shipped in four documents and still drifted, because prose is the one enforcement layer a model can talk itself past.
+<br>**The default is no comment.** The code is the documentation: when a line needs explaining, the fix is nearly always a clearer name, a smaller function or a named constant, and reaching for a comment instead leaves both the confusing code and a line that goes stale. On top of that, agents write comments *at the reviewer*: which acceptance criterion the line satisfies, what the code used to do, why it's correct. All of it is true on the day of the review and dead weight the moment the PR merges. The rule against it shipped in four documents and still drifted, because prose is the one enforcement layer a model can talk itself past.
 
 A `PreToolUse` hook (`hooks/comment_guard.py`) denies the edit on two deterministic checks, both applied **only to comment lines the edit adds** — a comment merely carried through an edit's context is never blamed for it:
 
 - **Noise patterns** — workflow artifacts (`AC-2`, `plan.md`, `Phase 3:`), diff narration (`we now…`, `Added a helper…`, `Previously this…`), reviewer-facing talk (`as requested`, `this ensures…`). Deliberately narrow: `# phase 2 of the TLS handshake` passes, `# Phase 2: wire the parser` does not.
-- **Density** — comment lines added are capped by the file's *own* comments-per-code ratio. It self-calibrates, which is the only way to enforce "match the file's existing comment density" at all: the same block lands in a heavily commented file and is refused in a terse one. New files are measured against their siblings; module docstrings and licence headers are not charged.
+- **Density** — a file with no comments grants exactly **one** comment line per edit, however large the edit: enough for the caveat that genuinely cannot be said any other way, and nothing that comes free. Beyond that the budget is the file's *own* comments-per-code ratio, so a codebase that documents heavily still gets to. New files are measured against their siblings; module docstrings and licence headers are not charged.
 
 Python docstrings count. `.md` / `.json` / `.yaml` and everything under `.dev-workflow/` are out of scope.
 
 **What it can and cannot check.** It catches *mechanical* shapes only — it cannot tell whether a comment earns its line, and one that tried would delete good comments. That judgement stays with `code-reviewer` and with you. Denial is safe in a way a `Stop` hook's refusal is not: deleting the comment is always an available move, so it can't trap a turn and needs no give-up bound.
 
-Off with `DEV_WORKFLOW_COMMENT_GUARD=off`, or per-project via `.dev-workflow/comment-guard.json`:
+Off with `DEV_WORKFLOW_COMMENT_GUARD=off`, or per-project via `.dev-workflow/comment-guard.json`. Defaults are `floor: 1`, `min_ratio: 0`; the values below are the pre-0.10 looser setting, for a project that wants it back:
 
 ```json
 { "enabled": true, "allow": ["phase \\d of the handshake"], "density": { "floor": 4, "min_ratio": 0.25 } }
+```
+</details>
+
+<details>
+<summary><b>🧪 Test guard</b> — how it works</summary>
+
+<br>The evidence gate above is the strongest incentive in the workflow: a turn cannot end without a citable artifact per acceptance criterion, and the cheapest artifact to manufacture is a new test. So criteria become tests one-for-one — including criteria that are pure declarations — and the tests come out shaped to be *cited*, not to be able to *fail*. A ledger reading `criterion 1 → x.spec.ts:123, criterion 2 → :135` is that failure mode, not rigour.
+
+Most of the fix is prompt-side (Stage 4's "one artifact per criterion is NOT one test per criterion", the `coder`'s testing rules, `code-reviewer`'s mandate to recommend DELETING a test). A `PreToolUse` hook (`hooks/test_guard.py`) backs the two shapes that need no judgement, applied **only to test files and only to what the edit adds**:
+
+- **Positional empty fakes** — `new Service({} as any, {} as any, model, {} as any…)`. A provider assembled by position out of blanks stops testing the code the moment a constructor parameter moves, and stays green while it does. Three or more placeholders in one call is the line; one or two is how a focused unit test stays short.
+- **A test with no assertion** — it cannot fail except by throwing, so it reports a behaviour as covered while covering nothing. Named assertion helpers (`expectNetwork(…)`, or any local helper whose own body asserts) count as asserting.
+
+**What it deliberately does NOT check:** *the test mocks the risk it claims to prove* — a `jest.fn()` counter standing in for an atomic `$inc` — which is the most damaging shape of all. Two designs were built and measured against 93 real test files: block-scoped detection missed every true positive (the fake lives in a factory outside the block), and file-scoped detection ran at roughly half false positives, because the claim lives in English — "a unique payer+amount candidate" is an in-process statement wearing a store guarantee's words, and a fake that *throws* is the only way to reach a driver error like E11000 at all. That judgement needs the subject read next to the test, so it belongs to `code-reviewer` and to the Testing contract in `conventions.md`.
+
+Off with `DEV_WORKFLOW_TEST_GUARD=off`, or per-project via `.dev-workflow/test-guard.json`:
+
+```json
+{ "enabled": true, "checks": { "fakes": true, "assertions": true }, "max_empty_args": 3, "allow": ["legacy fixture"] }
 ```
 </details>
 
