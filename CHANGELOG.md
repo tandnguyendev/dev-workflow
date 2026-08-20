@@ -5,6 +5,24 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **The approval gate denied any Bash command containing a regex like `(.*?)`.** Its
+  glob sweep ran on a quote-STRIPPED copy of the command and split on shell
+  separators including parentheses, so an ordinary `re.search(r'<t>(.*?)</t>', s)`
+  produced the bare token `.*?` — which `fnmatch` happily matches against
+  `.approval-gate`. Regexes containing `.*` are everywhere, so this fired on
+  read-only greps, `sed` one-liners and `python3 -c` snippets that had nothing to do
+  with the gate, which is exactly how a guard earns being switched off.
+
+  Globs do not expand inside quotes, so the sweep now removes quoted spans instead
+  of unquoting them. A quote closed early to split the name (`rm '.approval-gat'?`)
+  would slip past that, so the stripped form is still swept — but only for patterns
+  that spell out at least six literal characters of the name, which no incidental
+  regex does. Every previously-blocked evasion stays blocked; verified against 11
+  evasion shapes and 12 ordinary commands.
+
 ## [0.10.1] - 2026-08-20
 
 ### Fixed

@@ -96,6 +96,27 @@ def test_bash_touching_gate_is_denied_through_globbing(tmp_path):
         assert denied(run_hook("gate.py", bash(cmd), project_dir=tmp_path)), cmd
 
 
+def test_a_quoted_regex_is_not_read_as_a_glob(tmp_path):
+    # The sweep ran on the quote-STRIPPED command and split on parens, so an ordinary
+    # `(.*?)` became the token `.*?`, which fnmatches the gate name — denying
+    # read-only greps and one-liners until the guard was worth switching off.
+    lock(tmp_path, "UNLOCKED\n")
+    for cmd in ("""python3 -c "import re; print(re.search(r'<t>(.*?)</t>', s))" ""","""
+                grep -o '\\.dev-workflow/[a-z-]*\\.json' hooks/*.py""",
+                "sed -n 's/.*= //p' file.txt",
+                'rg "^from (.*) import"',
+                "awk '{ print $1 }' *.log"):
+        assert hook_json(run_hook("gate.py", bash(cmd), project_dir=tmp_path)) is None, cmd
+
+
+def test_a_glob_split_by_early_quoting_is_still_denied(tmp_path):
+    # Closing the quote mid-name leaves the wildcard outside it, so dropping quoted
+    # spans alone would miss this; the stripped form is swept too.
+    lock(tmp_path, "UNLOCKED\n")
+    for cmd in ("rm '.approval-gat'?", 'rm ".approval-ga"*'):
+        assert denied(run_hook("gate.py", bash(cmd), project_dir=tmp_path)), cmd
+
+
 def test_globs_that_cannot_match_a_dotfile_are_allowed(tmp_path):
     # In the shell a glob whose first character is not a literal dot never expands
     # to a dotfile, so `rm *.pyc` cannot touch the gate — denying everyday globs

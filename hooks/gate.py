@@ -77,6 +77,8 @@ _SHELL_QUOTES = re.compile(r"""['"\\]""")
 # would match the gate file.
 _TOKEN_SPLIT = re.compile(r"[\s;|&<>()`]+")
 _GLOB_CHARS = re.compile(r"[*?\[]")
+# A quoted run is inert to globbing, so it is removed before the glob sweep.
+_QUOTED_SPAN = re.compile(r"'[^']*'|\"[^\"]*\"")
 
 
 def deny(reason):
@@ -90,6 +92,19 @@ def deny(reason):
     sys.exit(0)
 
 
+def glob_hits_gate(text, min_literal=0):
+    """Tokens the shell would expand onto the gate. Only a leading literal dot can
+    match a dotfile; `min_literal` demands that many literals before the wildcard."""
+    for tok in _TOKEN_SPLIT.split(text):
+        name = os.path.basename(tok)
+        if not name.startswith(".") or not fnmatch.fnmatch(GATE_NAME, name):
+            continue
+        wild = _GLOB_CHARS.search(name)
+        if wild and wild.start() >= min_literal:
+            return True
+    return False
+
+
 def bash_touches_gate(command):
     # Deny-by-default: any Bash command that so much as references the gate file is
     # blocked — the model has no legitimate need to touch the gate via Bash. Match
@@ -98,15 +113,12 @@ def bash_touches_gate(command):
     stripped = _SHELL_QUOTES.sub("", command)
     if GATE_NAME in command or GATE_NAME in stripped:
         return True
-    # Glob patterns that would expand to the gate file. Only a pattern whose first
-    # character is a literal dot can match a dotfile in the shell, so `rm *.pyc`
-    # or `ls *` cannot touch the gate and must not be denied for it.
-    for tok in _TOKEN_SPLIT.split(stripped):
-        name = os.path.basename(tok)
-        if (name.startswith(".") and _GLOB_CHARS.search(name)
-                and fnmatch.fnmatch(GATE_NAME, name)):
-            return True
-    return False
+    # Globs do not expand inside quotes, and sweeping the quote-STRIPPED form read
+    # every quoted `(.*?)` as one, denying ordinary greps and one-liners.
+    if glob_hits_gate(_QUOTED_SPAN.sub(" ", command)):
+        return True
+    # Quotes closed early to split the name (`'.approval-gat'?`) survive that.
+    return glob_hits_gate(stripped, min_literal=6)
 
 
 def target_path(tool_input):
