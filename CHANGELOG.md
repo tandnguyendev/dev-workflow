@@ -23,6 +23,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   regex does. Every previously-blocked evasion stays blocked; verified against 11
   evasion shapes and 12 ordinary commands.
 
+### Added
+- **`/dev-workflow:config` — the effective configuration, and where each value came
+  from.** The plugin's knobs were spread over three JSON files, two environment
+  variables and a gate file, documented only inside collapsed README sections and
+  hook docstrings, and every one of them fails silently: `comment_guard`,
+  `test_guard` and the feature skill's read of `models.json` all swallow a parse
+  error and carry on with defaults. That is right — a malformed preference must
+  never crash an edit or trap a turn — but it means a stray comma disables nothing,
+  warns nobody, and leaves a project believing it configured something.
+
+  The new skill reports each knob's effective value beside its provenance:
+  `default`, `file`, `env <VAR>`, or `file, IGNORED` for a key that was written and
+  changed nothing. A `PROBLEMS` block leads when a file is being ignored in full,
+  when a key is misspelled past recognition, when an `allow` pattern will not
+  compile, when `"enabled": "false"` was written as a string (only the literal JSON
+  `false` disables a guard), or when a `DEV_WORKFLOW_*_GUARD` switch is set and no
+  file can override it.
+
+  `hooks/config.py` never restates a default: it imports the guards and reads their
+  own constants and their own `load_config`, and scrapes agent names and default
+  models from `agents/*.md` frontmatter — so a report that disagrees with the
+  running hook is not constructible. `config set <key> <value>` writes a single key
+  and prunes anything equal to its default, keeping each file a diff against the
+  plugin rather than a frozen copy of it, and refuses to write over a file it
+  cannot parse.
+
 ## [0.10.1] - 2026-08-20
 
 ### Fixed

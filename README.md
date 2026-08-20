@@ -48,6 +48,7 @@ Working docs scaffold automatically under `.dev-workflow/features/<slug>/`; mult
 | `/dev-workflow:init` | Inspect the project, draft `conventions.md` + `project-map.md`, import conventions from `CLAUDE.md` |
 | `/dev-workflow:feature` | Drive the whole feature workflow (orchestrator) |
 | `/dev-workflow:status` | Readout of the active feature / phase / gate |
+| `/dev-workflow:config` | Effective settings, where each came from, and which config lines are silently doing nothing |
 | `/dev-workflow:checkpoints` | List auto-snapshots |
 | `/dev-workflow:rollback` | Restore to a checkpoint (safe, reversible) |
 
@@ -185,6 +186,27 @@ Off with `DEV_WORKFLOW_TEST_GUARD=off`, or per-project via `.dev-workflow/test-g
 ```json
 { "enabled": true, "checks": { "fakes": true, "assertions": true }, "max_empty_args": 3, "allow": ["legacy fixture"] }
 ```
+</details>
+
+<details>
+<summary><b>🎛️ Config readout</b> — how it works</summary>
+
+<br>Every guard here fails *quietly* by design: `comment_guard`, `test_guard` and the feature skill's read of `models.json` all swallow a parse error and carry on with defaults, because a malformed preference must never crash an edit or trap a turn. The cost is that a stray comma disables nothing, warns nobody, and leaves the project believing it configured something.
+
+`/dev-workflow:config` is the readout that closes that hole. It reports every knob's **effective** value and, next to it, **where the value came from** — `default`, `file`, `env <VAR>`, or `file, IGNORED` for a key that was written and changed nothing (a wrong type, a regex that will not compile). A `PROBLEMS` block leads when a file is being ignored in full, when a key is misspelled past recognition, or when `DEV_WORKFLOW_*_GUARD` is set and no file can override it.
+
+It never restates a default: `hooks/config.py` imports the guards and reads their own constants and their own `load_config`, and scrapes agent names and default models from `agents/*.md` frontmatter — so a report that disagrees with the running hook is not constructible.
+
+`config set <key> <value>` writes one key and prunes anything equal to its default, keeping each file a diff against the plugin rather than a frozen copy of it. It refuses to write over a file it cannot parse.
+
+```
+/dev-workflow:config
+/dev-workflow:config set comment-guard.density.floor 4
+/dev-workflow:config set models.coder sonnet
+/dev-workflow:config set test-guard.checks.fakes default
+```
+
+`.approval-gate` and `.dev-workflow/active` show up under *workflow state*, not configuration — the gate is yours alone, and no tool call here can move it.
 </details>
 
 <details>
