@@ -5,6 +5,16 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] - 2026-08-20
+
+### Fixed
+- **`pytest` at the repo root collected a shipped hook and died before running a
+  single test**, taking CI red on the 0.10.0 tag. `hooks/test_guard.py` matches
+  pytest's default `test_*.py` glob, so collection imported it as a test module and
+  choked on its `test_blocks()` generator. A `pytest.ini` now declares what was
+  always true — the suite is in `tests/` — with `norecursedirs` covering an
+  explicit `pytest .` as well. Local runs used `pytest tests/` and never saw it.
+
 ## [0.10.0] - 2026-08-20
 
 ### Changed
