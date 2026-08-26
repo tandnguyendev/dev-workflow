@@ -7,6 +7,22 @@
 <What are we building and why. The user-facing goal — written as the orchestrator
 restated it back to the user, not as the raw one-line request.>
 
+<!-- BUG MODE ONLY — delete this block for a feature. Filled in Stage 0.5's bug
+     branch, before anything is planned, so the CAUSE is reviewable at the plan
+     checkpoint instead of living only in the conversation.
+## 1a. Bug: reproduction & root cause
+- Repro: <the smallest command / test / request that triggers it, verbatim>
+- Observed: <actual output — pasted, not paraphrased. This is the "before" half of
+  Stage 4's Evidence ledger.>
+- Expected: <what should have happened>
+- Root cause: <`file:line` + why THAT code produces THIS symptom. The cause, not the
+  place the symptom surfaced.>
+- Blast radius: <what else reaches this code path; what else the same cause is
+  plausibly breaking that nobody reported>
+- Data already written: <bad rows/records the bug produced, or "none". Repairing them
+  is its own phase — never folded into the code fix.>
+-->
+
 ## 1b. Acceptance criteria
 <Concrete, checkable statements of what must be true when this is done. Each one
 should be something an artifact can be pointed at: "a request with no `page` param

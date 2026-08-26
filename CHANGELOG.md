@@ -5,6 +5,39 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **`--bug`: a bug-shaped front end for `/dev-workflow:feature`.** The workflow had
+  one entry path, and it assumed you already knew what you wanted built — Stage 0.5
+  turns a request into acceptance criteria. A bug report's unknown is not what to
+  build, it is where the cause is, and nothing downstream could recover from getting
+  that wrong: reviewers check the code against the plan, so a patch aimed at the
+  symptom passes every review in the workflow when the plan says "stop the 500".
+
+  `--bug` (or a request that plainly reports something broken) swaps that stage for
+  reproduce → root cause → regression, then rejoins the existing tiers, phases,
+  reviews, gates and hooks unchanged — it is a branch in one stage, not a second
+  workflow with a second state model the hooks would have to learn to parse.
+  It reproduces BEFORE diagnosing and **stops to ask when it cannot**, because an
+  unreproducible bug leaves Stage 4's evidence gate measuring nothing; it names the
+  cause at `file:line` and separates it from the symptom, deliberately, out loud;
+  it states the blast radius, including **data the bug already wrote** — repairing
+  that is a phase with its own rollback and its own approval, never a silent extra
+  in the fix; and it stops if the diagnosis finds no bug rather than building the
+  change that would make the report true.
+
+  The first acceptance criterion is always the regression, and the Evidence ledger
+  must cite the repro **failing before and passing after**. The red half is captured
+  during diagnosis, so this costs one paste rather than one more test run — and it
+  closes the gap where a test written after a fix, never seen fail, is cited as
+  proof it works. The "a declaration already enforces it" exemption does not apply
+  to it. Tier is set by the ROOT CAUSE, not the severity of the symptom: a
+  production outage caused by a one-line off-by-one stays trivial and stays one
+  reviewable diff. `templates/spec.md` gained an optional (commented-out) section
+  `1a. Bug: reproduction & root cause` so the cause is reviewable at the plan
+  checkpoint instead of living only in the conversation.
+
 ## [0.11.0] - 2026-08-20
 
 ### Fixed
