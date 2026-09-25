@@ -20,11 +20,13 @@ Two deterministic checks, both applied ONLY to comment lines the edit ADDS:
    `code-reviewer`. A guard that cries wolf gets configured off, and then guards
    nothing.
 
-2. DENSITY — the number of comment lines added is capped at FLOOR plus the file's
-   OWN existing comment density. FLOOR is 0: a file with no comments grants none,
-   and a new file grants none. The budget is never borrowed from sibling files —
-   that is how agent-written comments used to compound, each one raising the
-   allowance for the next file in the directory.
+2. DENSITY — the comment lines an edit adds are capped at the larger of FLOOR and
+   the added code times a ratio: the file's OWN comment density, or MIN_RATIO when
+   the file has little or none. The defaults leave room for a one-line WHY on
+   logic that is genuinely hard — one per edit, about one per twenty lines of
+   code — and none for commenting everything. The budget is never borrowed from
+   sibling files: that is how agent-written comments used to compound, each one
+   raising the allowance for the next file in the directory.
 
 3. BLOCK LENGTH — no single added comment block may carry more than MAX_BLOCK lines
    of text, whatever the density. A multi-line comment is almost always a design
@@ -161,10 +163,10 @@ def is_pragma(line, text):
 
 
 # --- density defaults -------------------------------------------------------
-# The default posture is NO comment: nothing comes free. A file that already
-# comments keeps granting its own ratio; one that does not grants nothing.
-FLOOR = 0
-MIN_RATIO = 0.0
+# Room for a short WHY where the logic is hard, not for narrating everything. A
+# file that already comments more keeps granting its own ratio.
+FLOOR = 1
+MIN_RATIO = 0.05
 MAX_BLOCK = 2
 # Below this many real lines a file's own density is noise, not a style signal
 # (a 4-line file with 1 comment does not "have" a 25% convention).
@@ -448,8 +450,8 @@ def main():
                 f"Comment block too long in {name}: {len(block)} lines, the limit is "
                 f"{cfg['max_block']}:\n    " + "\n    ".join(block) + "\n\n"
                 "A comment that needs a paragraph is arguing a design decision. The "
-                f"argument belongs in {elsewhere}. Keep at most one short line — the "
-                "constraint itself — or none, and retry."
+                f"argument belongs in {elsewhere}. Keep the WHY in one short line — "
+                "the constraint itself — and retry."
             )
         for _, text in comments:
             for pattern, why in NOISE:
@@ -486,12 +488,12 @@ def main():
         f"Too many comments for this edit: it adds {total_comments} comment lines "
         f"to {total_code} lines of code, and {observed}. The budget here is "
         f"{allowance}.\n\n"
-        "The default here is NO comment. Delete them: if a line needs explaining, "
-        "fix the code instead — a clearer name, a smaller function, a named "
-        "constant. Why the code is shaped this way belongs in "
-        f"{elsewhere}, not in the file.\n"
-        "If a comment is truly unavoidable (an external contract the code cannot "
-        "express), say so in your message rather than working around this."
+        "Keep only a one-line WHY on logic that is genuinely hard to follow. Delete "
+        "comments that say WHAT the code does — fix the code instead: a clearer "
+        "name, a smaller function, a named constant. Talk about the change belongs "
+        f"in {elsewhere}, not in the file.\n"
+        "If this file genuinely needs more, say so in your message rather than "
+        "working around this."
     )
 
 

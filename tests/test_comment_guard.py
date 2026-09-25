@@ -1,7 +1,8 @@
 """Comment guard: added comments that cite the workflow, narrate the diff or talk
 to the reviewer are denied; density is capped by the file's own habits (zero for a
-comment-free or new file); no comment block runs past two lines; and tool
-directives are never counted."""
+comment-free or new file: a one-line WHY per edit, about one per twenty lines of
+code); no comment block runs past two lines; and tool directives are never
+counted."""
 import json
 import sys
 
@@ -261,20 +262,22 @@ def test_max_block_is_configurable(tmp_path):
     assert hook_json(run(edit(src, new), tmp_path)) is None
 
 
-def test_a_single_comment_on_a_terse_file_is_denied_by_default(tmp_path):
-    # The default is NO comment: a comment-free file grants nothing.
+def test_one_why_line_passes_on_a_terse_file(tmp_path):
+    # Hard logic deserves its reason; what the guard stops is narration and essays.
+    src = tmp_path / "src.py"
+    src.write_text(TERSE)
+    new = "def g():\n    # Number() loses precision past 2^53, so scale as bigint.\n    return 1\n"
+    assert hook_json(run(edit(src, new), tmp_path)) is None
+
+
+def test_a_project_can_forbid_comments_entirely(tmp_path):
+    (tmp_path / ".dev-workflow").mkdir()
+    (tmp_path / ".dev-workflow" / "comment-guard.json").write_text(
+        json.dumps({"density": {"floor": 0, "min_ratio": 0}}))
     src = tmp_path / "src.py"
     src.write_text(TERSE)
     new = "def g():\n    # The vendor SDK mutates this in place.\n    return 1\n"
     assert denied(run(edit(src, new), tmp_path))
-
-
-def test_the_floor_can_be_raised_per_project(tmp_path):
-    floor(tmp_path, 1)
-    src = tmp_path / "src.py"
-    src.write_text(TERSE)
-    new = "def g():\n    # The vendor SDK mutates this in place.\n    return 1\n"
-    assert hook_json(run(edit(src, new), tmp_path)) is None
 
 
 @pytest.mark.parametrize("pragma", [
@@ -311,23 +314,33 @@ def test_a_second_comment_line_on_a_terse_file_is_denied(tmp_path):
     assert denied(run(edit(src, new), tmp_path))
 
 
-def test_a_terse_file_grants_nothing_beyond_the_floor_however_big_the_edit(tmp_path):
-    # No min_ratio: a large edit to a comment-free file does not earn a paragraph.
+def spread(comments, code_per_comment):
+    return ("def g():\n"
+            + "".join(f"    # why {i}\n" + "".join(f"    s{i}_{j} = {j}\n"
+                                                 for j in range(code_per_comment))
+                      for i in range(comments))
+            + "    return 1\n")
+
+
+def test_a_large_edit_earns_a_why_per_twenty_lines(tmp_path):
     src = tmp_path / "src.py"
     src.write_text(TERSE)
-    new = ("def g():\n"
-           + "".join(f"    # explanation line {i}\n" for i in range(3))
-           + "".join(f"    step{i} = {i}\n" for i in range(40))
-           + "    return 1\n")
-    assert denied(run(edit(src, new), tmp_path))
+    assert hook_json(run(edit(src, spread(3, 20)), tmp_path)) is None
+
+
+def test_commenting_every_few_lines_is_denied_on_a_terse_file(tmp_path):
+    src = tmp_path / "src.py"
+    src.write_text(TERSE)
+    proc = run(edit(src, spread(4, 3)), tmp_path)
+    assert denied(proc) and "comment lines" in reason(proc)
 
 
 def test_new_file_header_is_charged(tmp_path):
     # A header docstring on a new file is where the design essay moves once the
-    # body is policed; it gets no free pass.
+    # body is policed; it gets no free pass on top of the budget.
     src = tmp_path / "new.py"
     content = ('"""Loads the ledger."""\n'
-               + "".join(f"def f{i}():\n    return {i}\n" for i in range(6)))
+               + "".join(f"def f{i}():\n    # why {i}\n    return {i}\n" for i in range(3)))
     assert denied(run(write(src, content), tmp_path))
 
 
@@ -336,7 +349,7 @@ def test_new_file_does_not_inherit_its_siblings_density(tmp_path):
     # every commented file raised the budget of the next one.
     (tmp_path / "sibling.py").write_text(COMMENTED)
     src = tmp_path / "new.py"
-    content = "def g():\n    # a reason\n    return 1\n"
+    content = "".join(f"def f{i}():\n    # a reason\n    return {i}\n" for i in range(4))
     assert denied(run(write(src, content), tmp_path))
 
 

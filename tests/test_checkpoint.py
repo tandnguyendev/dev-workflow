@@ -121,3 +121,41 @@ def test_hook_mode_snapshots_on_notebook_edit(git_repo):
 def test_hook_mode_ignores_non_mutating_tool(git_repo):
     run_hook("checkpoint.py", {"tool_name": "Read", "cwd": str(git_repo)}, project_dir=git_repo)
     assert "no checkpoints" in cp(git_repo, "list").stdout.lower()
+
+
+def test_ship_then_since_ship_shows_only_later_edits(git_repo):
+    (git_repo / "a.txt").write_text("agent wrote this\n")
+    (git_repo / "new.txt").write_text("agent file\n")
+    assert "refs/dev-workflow/shipped/orders" in cp(git_repo, "ship", "orders").stdout
+    assert "no edits" in cp(git_repo, "since-ship", "orders").stdout
+
+    (git_repo / "a.txt").write_text("user rewrote this\n")
+    diff = cp(git_repo, "since-ship", "orders").stdout
+    assert "-agent wrote this" in diff and "+user rewrote this" in diff
+    assert "new.txt" not in diff  # untracked agent files are part of the shipped tree
+
+
+def test_since_ship_limits_to_paths(git_repo):
+    (git_repo / "b.txt").write_text("b\n")
+    cp(git_repo, "ship", "orders")
+    (git_repo / "a.txt").write_text("changed\n")
+    (git_repo / "b.txt").write_text("changed\n")
+    diff = cp(git_repo, "since-ship", "orders", "b.txt").stdout
+    assert "b.txt" in diff and "a.txt" not in diff
+
+
+def test_ship_does_not_move_head_or_pollute_checkpoints(git_repo):
+    before = head(git_repo)
+    cp(git_repo, "ship", "orders")
+    assert head(git_repo) == before
+    assert "shipped" not in cp(git_repo, "list").stdout
+
+
+def test_since_ship_of_an_unshipped_feature_fails_gracefully(git_repo):
+    proc = cp(git_repo, "since-ship", "never")
+    assert proc.returncode == 0 and "never shipped" in proc.stderr
+
+
+def test_ship_rejects_a_slug_that_is_not_a_ref_name(git_repo):
+    proc = cp(git_repo, "ship", "../../heads/main")
+    assert "not a feature slug" in proc.stderr

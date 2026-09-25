@@ -75,14 +75,16 @@ fallback. It applies on top of the conventions above, in every project.*
   permission, cache or abuse guard. Suggest it; don't build it.
 - Handle only errors that can actually occur here; validate only untrusted input,
   at the boundary. No checks for cases the types or callers rule out.
-- Write NO comments. When a line needs explaining, fix the code (a clearer name, a
-  smaller function, a named constant); the reason for a design choice goes in the
-  commit message, not the file.
-  (Enforced by a hook, which denies the edit: a comment-free or new file grants
-  zero comment lines, a commented file only its own ratio, and no added block may
-  run past two lines. Tool directives like `eslint-disable` are exempt. Loosen it
-  with `.dev-workflow/comment-guard.json` -> `{"density": {"floor": 1}}`, exempt a
-  phrase with `{"allow": ["<regex>"]}`, or turn it off with `{"enabled": false}`.)
+- Comments: a one-line WHY where the logic is genuinely hard — a non-obvious
+  constraint, the idea behind a formula, an order that matters, a workaround.
+  Never WHAT the code does (fix the name instead), never the history of the
+  change, never a paragraph; longer reasoning goes in the commit message.
+  (Enforced by a hook, which denies the edit: about one comment line per edit and
+  one per twenty lines of code, more only where the file already comments more,
+  and no added block past two lines. Tool directives like `eslint-disable` are
+  exempt. Tune it in `.dev-workflow/comment-guard.json`: `{"density": {"floor": 0,
+  "min_ratio": 0}}` forbids comments entirely, `{"allow": ["<regex>"]}` exempts a
+  phrase, `{"enabled": false}` turns it off.)
 - Before adding anything beyond the literal request, STOP and ask — default to less.
 
 ## Readability contract (always applies)
@@ -99,6 +101,13 @@ fallback. It applies on top of the conventions above, in every project.*
   framework-dictated signatures are exempt); control flow nested at most two
   levels; the entry function reads top to bottom, details below it in private
   functions that name each step.
+
+## Learned rules
+> Rules this project learned from past features — each one approved by the user at
+> a feature's final checkpoint, added by `/dev-workflow:feature`, never invented.
+> One line each, ending with where it came from. Keep it under ~15 lines: when it
+> grows past that, merge or drop the weakest rather than append.
+> e.g. `- Scale token amounts with bigint, never Number() — user rewrote formatUnits (space-balance)`
 
 ## Domain-specific correctness rules
 > Invariants that MUST hold for this domain. Examples by domain:

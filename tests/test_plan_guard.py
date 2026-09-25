@@ -176,7 +176,7 @@ def test_placeholder_rounds_line_is_not_a_number(tmp_path):
 
 # --- keeping project-map.md alive -------------------------------------------
 
-def done_log(*, map_line=None, first_map_line=None):
+def done_log(*, map_line=None, first_map_line=None, lessons="none"):
     """A finished two-phase feature (every section approved)."""
     def sec(title, extra):
         return (f"## {title}\n"
@@ -184,7 +184,8 @@ def done_log(*, map_line=None, first_map_line=None):
                 f"{extra}"
                 "- Evidence: `pytest -q` -> 53 passed\n")
     a = sec("Phase 1 — a", f"- Project map updated: {first_map_line}\n" if first_map_line else "")
-    b = sec("Phase 2 — b", f"- Project map updated: {map_line}\n" if map_line else "")
+    b = sec("Phase 2 — b", (f"- Project map updated: {map_line}\n" if map_line else "")
+            + (f"- Lessons: {lessons}\n" if lessons else ""))
     return "# Phase log: t\n\n" + a + "\n" + b
 
 
@@ -222,6 +223,27 @@ def test_an_early_phase_cannot_answer_for_the_whole_feature(tmp_path):
     with_map(tmp_path)
     proc = stop(tmp_path, log=done_log(first_map_line="no structural change"))
     assert blocked(proc) and "Phase 2" in reason(proc)
+
+
+# --- lessons ----------------------------------------------------------------
+
+def test_finished_feature_without_a_lessons_line_is_blocked(tmp_path):
+    proc = stop(tmp_path, log=done_log(lessons=None))
+    assert blocked(proc) and "Lessons" in reason(proc)
+
+
+def test_lessons_placeholder_is_not_an_answer(tmp_path):
+    proc = stop(tmp_path, log=done_log(lessons="<rules added, or none>"))
+    assert blocked(proc)
+
+
+def test_none_is_a_complete_lessons_answer(tmp_path):
+    assert hook_json(stop(tmp_path, log=done_log(lessons="none"))) is None
+
+
+def test_unfinished_feature_is_not_asked_for_lessons(tmp_path):
+    log = done_log(lessons=None).replace("[x] USER APPROVED", "[ ] USER APPROVED", 1)
+    assert hook_json(stop(tmp_path, log=log)) is None
 
 
 # --- bounding, so it cannot trap the turn -----------------------------------

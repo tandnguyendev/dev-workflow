@@ -1,6 +1,6 @@
 ---
 name: feature
-description: Orchestrate a full spec-driven feature workflow — establish project context, clarify the request into acceptance criteria, size the work, research, solution options, plan, phased implementation with per-phase reviews, and a final audit. Handles bug fixes too (`--bug`, or any request reporting something broken): reproduce, root-cause, regression. Machinery scales to the size of the change. Domain-agnostic. Stops for user approval at every checkpoint.
+description: Orchestrate a full spec-driven feature workflow — establish project context, clarify the request into acceptance criteria, size the work, research, solution options, plan, phased implementation with per-phase reviews, and a final audit. Handles bug fixes too (`--bug`, or any request reporting something broken): reproduce, root-cause, regression. Learns across features: proposes rules for conventions.md from review findings and the user's own post-ship edits. Machinery scales to the size of the change. Domain-agnostic. Stops for user approval at every checkpoint.
 ---
 
 # Feature workflow (orchestrator)
@@ -66,6 +66,7 @@ the user's call at the plan checkpoint — only whether you made the choice sile
 | `- Why separate:` | every phase AFTER the first | Each extra phase costs the user an implement-review-approve round-trip. Splitting stays allowed; splitting without naming why does not. |
 | `- Unresolved:` | any `phase-log.md` phase whose `- Review rounds:` exceeds 2 | Going past the budget means coder and reviewer did not converge — that is a decision for the USER, and the extra rounds must not pass silently. |
 | `- Project map updated:` | the LAST section of a finished feature, when the project has a `project-map.md` | Stage 5 is what maintains the map — and single-phase features skip Stage 5, which is now most of them. `"no structural change"` is a complete answer; saying nothing is not. |
+| `- Lessons:` | the LAST section of a finished feature | Stage 6 is where the workflow learns, and it runs when everyone wants to be done. `"none"` is a complete answer; skipping the step is not. |
 
 Until a phase has a real `- Scope:`, the plan is still the untouched scaffold and
 the guard stays silent — Stages 0.5–2 legitimately end turns with no plan written.
@@ -103,6 +104,9 @@ map, existing features, shared building blocks, extension points) if they exist.
   existing features that overlap, building blocks to reuse, the extension point
   to hook into) and carry THOSE forward. You hand agents excerpts, never "go read
   project-map.md" — the point of the file is that they don't each pay for it.
+- **Read what the user changed after the last feature shipped** — see "Post-ship
+  edits" under Stage 6. Do it before Stage 0.5, so an approved rule already binds
+  this feature.
 
 ## Stage 0.5 — Clarify the request (this part is yours; you are the analyst)
 **You are the only party in this workflow who can talk to the user.** Subagents
@@ -557,8 +561,9 @@ so the finished feature is reported as stuck on "Final review" forever. Removing
 section is what marks the feature done. Skipping the stage does NOT skip step 4
 below: if the change added a capability or moved something, `project-map.md` still
 gets its line at the phase's approval checkpoint — and since you are deleting the
-Final review section that normally carries `- Project map updated:`, write that line
-on the LAST PHASE instead. The plan guard requires it there.
+Final review section that normally carries `- Project map updated:` and
+`- Lessons:`, write both lines on the LAST PHASE instead, and run Stage 6 at that
+phase's approval checkpoint. The plan guard requires them there.
 
 1. Run over all phases together:
    - `code-reviewer` on CROSS-PHASE issues ONLY — inconsistencies, phase
@@ -583,9 +588,65 @@ on the LAST PHASE instead. The plan guard requires it there.
    - Fix entries this feature proved stale, and drop entries for what it removed.
    - Keep entries to a couple of lines. If nothing structural changed, say so and
      write nothing — a map that grows a paragraph per feature stops being read.
-5. **CHECKPOINT: present the final result AND the `project-map.md` update, then
-   stop for sign-off.** The map is what future agents will treat as fact, so the
-   user gets to correct it here.
+5. **CHECKPOINT: present the final result, the `project-map.md` update AND the
+   Stage 6 lesson proposals, then stop for sign-off.** The map is what future
+   agents will treat as fact, so the user gets to correct it here.
+
+## Stage 6 — Lessons  (every feature, every tier, at its final checkpoint)
+The workflow does not get better on its own: a review finding, a correction the user
+made, a suggestion they turned down all die with the feature's `phase-log.md`, and
+the next feature makes the same mistake. This stage turns what recurred into a rule
+in `conventions.md` — which every agent already reads on every phase — and only with
+the user's approval. It runs at the final checkpoint: Stage 5's, or the last phase's
+when Stage 5 is skipped. It is one question to the user, not a retrospective.
+
+1. **Gather signal from this feature** — the phase-log you already have:
+   - what the user asked to change at any checkpoint (`- User notes:`), and what
+     they overrode at an escalation (`- Unresolved:`);
+   - `Suggested, not built:` items the user declined — "don't propose X" is a rule;
+   - review findings of the same KIND that came up in two or more phases, or that
+     the coder kept needing a round to fix;
+   - plus any rules from "Post-ship edits" below that are still pending.
+2. **Keep only what generalises.** A rule is worth a line only if it would change
+   what an agent does on a DIFFERENT feature of this project. Drop one-off facts
+   and anything the linter could enforce (propose the lint rule instead). If
+   `conventions.md` already has the rule and it was broken anyway, don't add a
+   duplicate — tell the user the rule is being ignored. One line each, imperative, concrete, ending with where it
+   came from: `- Scale token amounts with bigint, never Number() — user rewrote
+   formatUnits (space-balance)`.
+3. **Propose at most three**, via one `AskUserQuestion` with `multiSelect`, each
+   option a rule with its evidence. Nothing worth proposing is the common, correct
+   outcome — then say so in one line and ask nothing.
+4. **Write the approved ones** to the `## Learned rules` section of `conventions.md`
+   (create the section above "Domain-specific correctness rules" if it is missing).
+   If it passes ~15 lines, propose merging or dropping the weakest in the same
+   question rather than growing it. Record the outcome on the last section's
+   `- Lessons:` line — the rules added, or "none". The plan guard requires the line.
+5. **Record the ship point** (git repos only), after the user signs off:
+   `python3 "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" ship <slug>`. It stores
+   the tree as it was handed over, which is what "Post-ship edits" diffs against.
+   If the approval gate is LOCKED, Bash is denied — ask the user to run it with a
+   `!` prefix, or skip it and say so; never work around the gate.
+
+### Post-ship edits — what the user changed after accepting the code
+The strongest signal this workflow ever gets arrives AFTER the feature: the user
+opens the code the agents wrote and rewrites part of it. Nobody tells the agents.
+At Stage 0 of the next feature, for the most recently shipped feature(s) — at most
+two, newest first from `git for-each-ref --sort=-creatordate
+--format='%(refname:short)' refs/dev-workflow/shipped` — whose last phase-log
+section has no `- Post-ship reviewed:` line:
+1. Run `python3 "${CLAUDE_SKILL_DIR}/../../hooks/checkpoint.py" since-ship <slug>
+   <files>`, passing the files from that feature's `- Changed:` lines. "never
+   shipped" means no ship point was recorded — mark it reviewed and move on.
+2. Read the diff for what the USER changed in agent-written code: rewritten logic,
+   deleted comments or tests, renamed variables, removed handling. Ignore changes
+   another feature's `- Changed:` explains, and formatting. Unsure whether an edit
+   was the user's? Ask in the same question rather than guess.
+3. Turn what generalises into rule proposals exactly as in steps 2–4 above, in one
+   `AskUserQuestion` — or none, which is common. Keep it quick; the user came here
+   to start a new feature.
+4. Write `- Post-ship reviewed: <date> — <rules added | no user edits | none
+   generalised>` on that feature's last section, so it is never asked about twice.
 
 ## Notes
 - Subagents can't pause to ask mid-task; scope each delegated task tightly and

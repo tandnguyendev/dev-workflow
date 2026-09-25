@@ -38,14 +38,14 @@ codebase's established style.
   untrusted input, never swallow silently.
 - No dead code, commented-out blocks, or unused symbols.
 - Keep public surfaces small; expose the minimum needed.
-- **Write NO comments.** The code is the documentation. When you feel the urge to
-  explain a line, fix the code — a clearer name, a smaller function, an early
-  return, a named constant. Why a design choice was made belongs in the commit
-  message, never in the file, where it goes stale. Tool directives
-  (`eslint-disable`, `noqa`) are not comments. Enforced by
-  `hooks/comment_guard.py`, which denies the edit outright: a comment-free or new
-  file grants zero comment lines, and no added block may run past two lines — see
-  its docstring for the escape hatches.
+- **Comments say WHY, in one line, where the logic is hard.** First fix the code —
+  a clearer name, a smaller function, an early return, a named constant. What
+  the code still cannot say (a non-obvious constraint, the idea behind a formula,
+  an order that matters, a workaround) gets one line. Never WHAT, never the
+  history of the change, never a paragraph — longer reasoning belongs in the
+  commit message. Tool directives (`eslint-disable`, `noqa`) are not comments.
+  Enforced by `hooks/comment_guard.py`: about one line per edit and one per twenty
+  lines of code, no block past two lines — see its docstring for the knobs.
 - Build only what the request states: no business rule, limit, cache, config or
   guard it did not ask for, and no handling for cases the types rule out.
 - Let the formatter own whitespace/quotes/semicolons — don't hand-format.

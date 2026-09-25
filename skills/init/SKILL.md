@@ -56,8 +56,10 @@ the lean budget is protecting.
      duplicate or overwrite it; complement it.
 2. Draft `conventions.md` using the section structure from the plugin template
    (Domain / Tech stack / Architecture / Coding conventions / Testing / Testing
-   contract / Simplicity contract / Readability contract / Domain-specific
-   correctness rules / Security focus / Workflow files). Fill each section from what
+   contract / Simplicity contract / Readability contract / Learned rules /
+   Domain-specific correctness rules / Security focus / Workflow files). Leave
+   Learned rules empty — the feature workflow fills it, and a re-run of `init` must
+   carry any existing entries over unchanged. Fill each section from what
    you observed; mark anything uncertain as an assumption. Copy the **Simplicity
    contract**, **Readability contract** and **Testing contract** sections verbatim
    from the template in BOTH paths (observed project conventions and greenfield

@@ -5,6 +5,32 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **The workflow learns across features.** A review finding, a correction you made
+  at a checkpoint, a suggestion you turned down all died with the feature's
+  `phase-log.md`, and the next feature repeated the mistake. A new **Stage 6 —
+  Lessons** runs at every feature's final checkpoint: it proposes at most three
+  one-line rules, each with its evidence, and writes the ones you pick to a new
+  `## Learned rules` section of `conventions.md`, which every agent already reads.
+- **Post-ship edits become lessons.** `checkpoint.py ship <slug>` records the tree
+  a feature was handed over in (`refs/dev-workflow/shipped/<slug>`); `since-ship
+  <slug> [path...]` diffs it against the working tree. At the start of the next
+  feature the orchestrator reads what you rewrote in agent code and proposes rules
+  from it, once per feature (`- Post-ship reviewed:`).
+- **Plan guard: `- Lessons:` line.** A finished feature must record what it
+  learned — `"none"` is a complete answer — so the step cannot be skipped silently.
+
+### Changed
+- **Comments: a one-line WHY is back.** 0.13's zero-comment default overshot —
+  genuinely hard logic lost the one line that said why. Defaults are now
+  `floor: 1`, `min_ratio: 0.05` (one line per edit, about one per twenty lines of
+  code); the two-line block cap and the no-sibling-inheritance rule stay, so the
+  design essays 0.13 stopped stay stopped. `coder` and `code-reviewer` now ask for
+  WHY on hard logic and forbid WHAT, history and paragraphs. `{"density":
+  {"floor": 0, "min_ratio": 0}}` restores zero.
+
 ## [0.13.0] - 2026-09-25
 
 ### Changed

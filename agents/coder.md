@@ -67,31 +67,41 @@ If you believe one of these IS needed, don't build it: name it in your return
 message under `Suggested, not built:` with one line of why. The orchestrator asks
 the user. Silently adding it is scope creep, however sensible it looks.
 
-**Write NO comments.** Not a docstring, not a JSDoc, not a one-line "why" —
-unless `conventions.md` explicitly requires doc comments on public APIs. When a
-line seems to need explaining, fix the code: a clearer name, an extracted
-function, a named constant. Reasons for a design choice go in your return message
-and `phase-log.md`, never in the file. Tool directives (`eslint-disable`, `noqa`,
-`@ts-expect-error`) are not comments and are fine.
-A `PreToolUse` hook enforces this: a file with no comments grants zero, a file that
-has some grants only its own ratio, and no added block may exceed two lines — so an
-edit with a comment is usually DENIED. The fix is always to delete the comment,
-never to reshape the code around the hook. If a comment is genuinely unavoidable
-(an external contract the code cannot express), say so in your return message.
-What that looks like, from a real diff this plugin produced:
+**Comments: a one-line WHY, and only where the logic is hard.** First make the
+code explain itself — a clearer name, an extracted function, a named constant.
+What still can't be read from the code gets ONE line saying WHY: a non-obvious
+constraint, the idea behind a formula or algorithm, an order that matters, a
+workaround for a library or vendor behaviour, a precision or concurrency trap.
+Never write: WHAT the next line does; the history of the change or which
+criterion it satisfies; an argument to the reviewer; a paragraph; a docstring on
+a file whose functions have none (unless `conventions.md` requires doc comments).
+Longer reasoning goes in your return message and `phase-log.md`. Tool directives
+(`eslint-disable`, `noqa`, `@ts-expect-error`) are not comments and are fine.
+A `PreToolUse` hook enforces the shape: about one comment line per edit and one
+per twenty lines of code (more only where the file already comments more), and no
+block over two lines. When it denies, cut to the one line that says why — or
+delete it — never reshape the code around the hook.
 
 ```ts
-// BAD — a design essay the reader did not need
+// BAD — a design essay
 // Not filtered on isDeployed: that flag is written by the chain scan, minutes
 // after the deploy it describes, and createSpace does not set it at all. ...
 const live = chains.filter((c) => !!c.address);
 
-// GOOD — the name carries it; the reason goes in the phase-log
+// BAD — says WHAT; the name should say it
+// keep chains that have an address
+const live = chains.filter((c) => !!c.address);
+
+// GOOD — the name carries the what
 const chainsWithAddress = chains.filter((chain) => !!chain.address);
+
+// GOOD — a WHY the code cannot say
+// Number() loses precision past 2^53, so scale on the bigint.
+const whole = raw / 10n ** BigInt(decimals);
 ```
 
-**Write for a human reading it cold.** With no comments, the code is the only
-explanation a teammate gets, and they read it months later without the spec, the
+**Write for a human reading it cold.** Comments are rare, so the code is nearly
+the only explanation a teammate gets, and they read it months later without the spec, the
 brief or your reasoning. Code that is correct but has to be decoded is a defect.
 - **The main function reads as the story** of what the feature does, top to
   bottom; details sit below it in helpers named for what they return.
@@ -132,9 +142,10 @@ return ['native', ...listedFirst.slice(0, MAX_TOKENS_PER_CHAIN)];
 ```
 
 **Trim pass — before you return, re-read your own diff** and delete every line
-that no `Done when:` criterion needs: the comments, the unasked-for handling, the
-new file or type used once, the export nobody imports, the test that restates a declaration.
-The reviewer will flag what you leave, and each finding costs a review round.
+that no `Done when:` criterion needs: the comments that say WHAT, the unasked-for
+handling, the new file or type used once, the export nobody imports, the test that
+restates a declaration. The reviewer will flag what you leave, and each finding
+costs a review round.
 
 After implementing:
 - Update the feature's `phase-log.md` for THIS phase. Its checkboxes are parsed by

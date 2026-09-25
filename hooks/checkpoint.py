@@ -7,7 +7,14 @@ commit on a shadow ref `refs/dev-workflow/checkpoints/<ts>` WITHOUT touching the
 user's index, HEAD, branch, or working tree. Always exits 0 and never denies —
 it is a side-effecting recorder, not a gate. Fails open on any error.
 
-As a CLI: `checkpoint.py snapshot | list | rollback [ref] | undo`.
+As a CLI: `checkpoint.py snapshot | list | rollback [ref] | undo | ship <slug> |
+since-ship <slug> [path...]`.
+
+`ship` records the tree a feature was handed over in, at
+`refs/dev-workflow/shipped/<slug>`; `since-ship` diffs that tree against the
+working tree now. What the user changed in the agent's code after accepting it is
+the most honest review the agent ever gets, and the feature workflow reads it at
+the start of the next feature to propose rules for `conventions.md`.
 
 Snapshot mechanism (never mutates the user's real index):
   GIT_INDEX_FILE=<tmp> git read-tree HEAD      # seed tmp index from HEAD
@@ -26,6 +33,7 @@ only (silent no-op otherwise); no retention/pruning yet.
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -33,6 +41,8 @@ import tempfile
 import time
 
 REF_PREFIX = "refs/dev-workflow/checkpoints"
+SHIPPED_PREFIX = "refs/dev-workflow/shipped"
+SLUG = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 MUTATING_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit", "Bash"}
 # Both are kept OUT of checkpoints and preserved live across a rollback: they are
 # the workflow's own memory, not part of the code being rolled back.
@@ -94,11 +104,8 @@ def last_snapshot(project_dir):
     return ref, tree
 
 
-def snapshot(project_dir, tool_name="", force=False):
-    """Create a snapshot ref if the tree changed (or force). Returns ref or None."""
-    if not is_git_repo(project_dir):
-        return None
-
+def working_tree(project_dir):
+    """(head, tree) — the working tree written as a tree object, via a temp index."""
     head = head_sha(project_dir)
     # A fresh temp DIRECTORY (mode 0700) with a never-preexisting index path,
     # so git creates a valid index and there is no shared-temp TOCTOU/symlink.
@@ -119,6 +126,15 @@ def snapshot(project_dir, tool_name="", force=False):
         _, tree = git(project_dir, ["write-tree"], env_extra=env)
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
+    return head, tree
+
+
+def snapshot(project_dir, tool_name="", force=False):
+    """Create a snapshot ref if the tree changed (or force). Returns ref or None."""
+    if not is_git_repo(project_dir):
+        return None
+
+    head, tree = working_tree(project_dir)
 
     # Dedup: skip if the working tree is identical to the newest snapshot.
     if not force:
@@ -136,6 +152,39 @@ def snapshot(project_dir, tool_name="", force=False):
     ref = f"{REF_PREFIX}/{_ref_stamp()}"
     git(project_dir, ["update-ref", ref, commit])
     return ref
+
+
+def shipped_ref(slug):
+    if not SLUG.match(slug or ""):
+        raise RuntimeError(f"not a feature slug: {slug!r}")
+    return f"{SHIPPED_PREFIX}/{slug}"
+
+
+def ship(project_dir, slug):
+    """Record the tree `slug` was handed over in. Re-shipping overwrites it."""
+    ref = shipped_ref(slug)
+    if not is_git_repo(project_dir):
+        return None
+    head, tree = working_tree(project_dir)
+    meta = json.dumps({"timestamp": _now(), "slug": slug, "head_before": head},
+                      separators=(",", ":"))
+    commit_args = ["commit-tree", tree, "-m", meta]
+    if head:
+        commit_args += ["-p", head]
+    _, commit = git(project_dir, commit_args)
+    git(project_dir, ["update-ref", ref, commit])
+    return ref
+
+
+def since_ship(project_dir, slug, paths=()):
+    """Unified diff from the shipped tree of `slug` to the working tree now."""
+    ref = shipped_ref(slug)
+    rc, _ = git(project_dir, ["rev-parse", "--verify", "-q", ref], check=False)
+    if rc != 0:
+        raise RuntimeError(f"feature {slug!r} was never shipped")
+    _, tree = working_tree(project_dir)
+    _, out = git(project_dir, ["diff", ref + "^{tree}", tree, "--", *paths])
+    return out
 
 
 def list_snapshots(project_dir):
@@ -321,6 +370,12 @@ def cli_main(argv):
         elif cmd == "undo":
             undo(project_dir)
             print("Reversed the last rollback.")
+        elif cmd == "ship":
+            ref = ship(project_dir, argv[1] if len(argv) > 1 else "")
+            print(ref or "(not a git repo; nothing recorded)")
+        elif cmd == "since-ship":
+            diff = since_ship(project_dir, argv[1] if len(argv) > 1 else "", argv[2:])
+            print(diff or "(no edits since ship)")
         else:
             print(f"unknown command: {cmd}", file=sys.stderr)
             sys.exit(2)

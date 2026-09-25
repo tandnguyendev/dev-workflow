@@ -12,10 +12,10 @@
 > safety hooks go silent — without saying so.
 > `[x] USER APPROVED` means the USER approved. Claude never ticks it unprompted.
 >
-> Two more lines are machine-checked, by the plan guard: `- Review rounds:` above 2
+> More lines are machine-checked, by the plan guard: `- Review rounds:` above 2
 > requires a filled `- Unresolved:`, and the LAST section of a finished feature needs
-> a `- Project map updated:` line (it is scaffolded in Final review below — when
-> Stage 5 is skipped, add it to the last phase instead). The rest is prose for you
+> a `- Project map updated:` line and a `- Lessons:` line (both scaffolded in Final
+> review below — when Stage 5 is skipped, add them to the last phase instead). The rest is prose for you
 > and the user; no hook reads it.
 
 ## Phase 1 — <title>
@@ -45,5 +45,6 @@
 - Unresolved:
 - Project map updated: <what was appended/corrected in project-map.md, or "no
   structural change">
+- Lessons: <rules the user approved into conventions.md "Learned rules", or "none">
 - Evidence: <cited proof for the whole feature — test suite result, validation
   command output, the key invariants checked end-to-end.>

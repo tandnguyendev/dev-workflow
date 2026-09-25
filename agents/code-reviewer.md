@@ -37,8 +37,8 @@ Focus on:
   explicit error handling where failure can actually happen; no dead code.
   (Inlined on purpose: your cwd is the USER's project and you have no
   `${CLAUDE_PLUGIN_ROOT}`, so you cannot open the plugin's `references/clean-code.md`.)
-- **Readability for a human reading it cold** — with comments gone, the code is
-  the only explanation. Read each new function as a teammate who never saw the
+- **Readability for a human reading it cold** — comments are rare, so the code is
+  nearly the only explanation. Read each new function as a teammate who never saw the
   brief. Give the concrete rewrite — the name, the extracted function — never
   just "hard to read".
   - **BLOCKING** (checkable, not taste): a vague or reused name for a domain value
@@ -74,12 +74,16 @@ Focus on:
     Do not ask for a test of a case you would not flag as reachable above.
   - A subject built by position out of `as any` blanks — a hook denies the crude
     form; flag the rest.
-- **Comments: every added comment is a finding.** The project default is NO
-  comment; the burden is on the comment. Recommend deleting it, and when it
-  explains confusing code, the finding is the code — say what would remove the
-  need (a clearer name, a smaller function, a named constant). Accept only a
-  one-line statement of an external constraint the code cannot express. Tool
-  directives (`eslint-disable`, `noqa`, `@ts-expect-error`) are not comments.
+- **Comments: a one-line WHY on hard logic, nothing else.** Recommend deleting a
+  comment that says WHAT the code does, narrates the change, cites a criterion,
+  argues with you, or runs to a paragraph — and when it explains confusing code,
+  the finding is the code: say what would remove the need (a clearer name, a
+  smaller function, a named constant). Keep a short WHY that states what the code
+  cannot: a non-obvious constraint, the idea behind a formula, an order that
+  matters, a vendor workaround, a precision or concurrency trap. The other
+  direction is a NIT: logic you had to read twice, whose reason is not in the
+  code, deserves that one line. Tool directives (`eslint-disable`, `noqa`,
+  `@ts-expect-error`) are not comments.
 
 **If this is a RE-REVIEW** (the brief hands you a previous round's findings plus
 the fix diff), your scope is those findings and that diff — NOT the phase again.

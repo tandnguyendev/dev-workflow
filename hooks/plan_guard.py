@@ -22,6 +22,10 @@ visible instead of silent. So this gate refuses to let a turn end when:
   4. A FINISHED feature (every section approved) never said what it did to
      `project-map.md`. Stage 5 is what maintains the map, and single-phase features
      skip Stage 5 — which, now that phases have to earn themselves, is most of them.
+  5. A FINISHED feature never said what it LEARNED: no `- Lessons:` line on its
+     last section. The review findings, the user's corrections and the suggestions
+     they turned down die with the feature unless someone turns them into rules, and
+     the step that does it runs at the one moment everyone wants to be done.
 
 Like the evidence gate, this raises the floor; it cannot judge whether what was
 written is TRUE. "Because it is separate" satisfies (2) — it is the user reading
@@ -162,6 +166,24 @@ def map_findings(log, root):
     return []
 
 
+def lessons_findings(log):
+    """A finished feature with no `- Lessons:` line on its last section.
+
+    Requires the statement, not a rule: "none" is a complete answer, and the
+    common one. What it removes is the feature that ended without anyone asking."""
+    sections = list(iter_phases(log))
+    if not sections or not all(approved for _t, _b, approved in sections):
+        return []
+    title, body, _ = sections[-1]
+    if is_unfilled(field_text(body, "Lessons")):
+        return [f"'{title}' is the last section of a finished feature, but it has no "
+                "`- Lessons:` line. Run the lessons step: propose at most three rules "
+                "for `conventions.md` from what this feature's reviews and the user "
+                "corrected, let the user pick, and record what was added — or write "
+                "\"none\" if nothing recurred."]
+    return []
+
+
 def main():
     try:
         payload = json.load(sys.stdin)
@@ -179,6 +201,7 @@ def main():
     if log:
         findings += budget_findings(log)
         findings += map_findings(log, root)
+        findings += lessons_findings(log)
 
     key = f"{slug or ''}::plan"
     if not findings:
