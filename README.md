@@ -53,17 +53,17 @@ Working docs scaffold automatically under `.dev-workflow/features/<slug>/`; mult
 | `/dev-workflow:checkpoints` | List auto-snapshots |
 | `/dev-workflow:rollback` | Restore to a checkpoint (safe, reversible) |
 
-**Subagents** — model routing is tiered to save tokens: cheap models scout and review, Opus is reserved for writing code. These are **defaults you can override per agent** (see below).
+**Subagents** — Opus wherever the job is judgement (designing, surveying what exists, writing and reviewing code, the final audit); Sonnet for the quick per-phase security filter that the audit backs up. These are **defaults you can override per agent** (see below).
 
 | Agent | Default model | Role |
 |-------|---------------|------|
-| `domain-researcher` | `haiku` | Domain/stack research (read-only + web) |
-| `solution-architect` | `haiku` | One solution option per angle (panel) |
+| `domain-researcher` | `opus` | Domain/stack research (read-only + web) |
+| `solution-architect` | `opus` | One solution option per angle (panel) |
 | `plan-reviewer` | inherit | Adversarial plan review before coding |
 | `coder` | `opus` | Implement one phase |
-| `code-reviewer` | `sonnet` | Logic/quality review |
-| `security-scan-fast` | `fable` | Fast per-phase security scan |
-| `security-audit` | `sonnet` | Deep final cross-phase audit |
+| `code-reviewer` | `opus` | Logic/quality review |
+| `security-scan-fast` | `sonnet` | Fast per-phase security scan |
+| `security-audit` | `opus` | Deep final cross-phase audit |
 
 Defaults are **aliases**, so each agent runs the newest model of its family without a plugin update. Want a fixed version (reproducible cost and behaviour)? Pin a full model ID per agent in `.dev-workflow/models.json`, below.
 

@@ -81,8 +81,8 @@ the guard stays silent — Stages 0.5–2 legitimately end turns with no plan wr
    multiple can coexist.
 
 ## Model routing — per-agent, user-overridable
-Each agent has a sensible default model in its `agents/*.md` frontmatter (cheap
-models scout/review, Opus writes code). If `.dev-workflow/models.json` exists, read
+Each agent has a sensible default model in its `agents/*.md` frontmatter (Opus
+wherever the job is judgement, Sonnet for the quick per-phase security scan). If `.dev-workflow/models.json` exists, read
 it ONCE now: it maps agent name → model (aliases `opus`/`sonnet`/`haiku`/`fable`, a
 full model ID, or `inherit`; keys starting with `_` are ignored). When you spawn an
 agent named there, pass that model as the spawn-time model override; for any agent

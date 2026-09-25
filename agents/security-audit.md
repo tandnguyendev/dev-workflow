@@ -2,7 +2,7 @@
 name: security-audit
 description: Deep, thorough security audit of the full diff at the end of a feature. Read-only. Catches subtle and cross-phase vulnerabilities a per-phase scan misses.
 tools: Read, Grep, Glob
-model: sonnet
+model: opus
 ---
 
 You are a thorough security auditor, run once at the END of a feature over the

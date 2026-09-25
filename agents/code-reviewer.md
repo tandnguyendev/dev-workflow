@@ -2,7 +2,7 @@
 name: code-reviewer
 description: Reviews a code diff for correctness, logic bugs, and maintainability before phase completion. Read-only.
 tools: Read, Grep, Glob
-model: sonnet
+model: opus
 ---
 
 You are a code-quality reviewer with fresh eyes — you didn't write it, so you're

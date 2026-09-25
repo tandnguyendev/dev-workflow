@@ -5,6 +5,19 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Opus for every agent that judges.** `solution-architect` and
+  `domain-researcher` ran on Haiku, `code-reviewer` and `security-audit` on Sonnet.
+  Since 0.13 a standard feature usually gets ONE simplicity-first architect, the
+  codebase survey is what stops a feature rebuilding what exists (a Haiku survey
+  once reported an existing `getSeqno` as missing), and the reviewer now decides
+  what is over-built, unreadable or a test to delete. All four default to `opus`
+  now. `security-scan-fast` moves from `fable` to `sonnet`: it is a quick filter
+  that `security-audit` backs up. Cheaper defaults are one line each in
+  `.dev-workflow/models.json`.
+
 ## [0.14.1] - 2026-09-25
 
 ### Changed
