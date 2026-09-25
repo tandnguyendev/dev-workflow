@@ -33,7 +33,11 @@ from here.>
 ## 1c. Assumptions & answers
 <What the user was ASKED and answered (question -> answer), and what was ASSUMED
 without asking. Assumptions stay visible so they can be vetoed later — an
-assumption nobody can see is just a guess.>
+assumption nobody can see is just a guess. An assumption picks between readings of
+the request; it never adds behaviour.>
+
+Suggested, not built: <extras you think are worth it — a limit, a cache, a guard, a
+business rule — one line each, or "none". NOT built unless the user opts in.>
 
 ## 2. Domain research summary
 <Key findings from the domain-researcher: relevant patterns, pitfalls, links.>

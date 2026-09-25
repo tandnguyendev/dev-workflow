@@ -41,6 +41,10 @@ honestly has nothing to add at this size, say that: "at this size the simplest
 approach is also the right one from a performance standpoint, because X" is a
 genuinely useful panel answer. Do not manufacture a difference to justify your slot.
 
+Do not add business rules the acceptance criteria do not state (limits, quotas,
+extra statuses, permissions, abuse guards). If your angle says one is needed, name
+it as a suggestion for the user, outside the option itself.
+
 Return (your final message IS the returned data, not a greeting):
 - Angle: <your assigned angle>
 - Approach: 2–4 sentences describing the option concretely for this codebase.

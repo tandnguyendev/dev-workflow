@@ -17,7 +17,8 @@ change. Optimize for catching clear, obvious issues quickly; a deeper audit
 Flag (ignore style, naming, formatting):
 - Generic checklist: injection (SQL/command/template), auth/authorization
   bypass, IDOR, leaked or logged secrets, insecure crypto, unsafe
-  deserialization, SSRF, path traversal, missing input validation.
+  deserialization, SSRF, path traversal, missing validation of UNTRUSTED input at a trust boundary
+  (do not ask to re-validate values from internal callers or already-typed data).
 - Any project-specific high-value risks named in `conventions.md`.
 - If no conventions file: apply the generic checklist above and note the domain
   you assumed.

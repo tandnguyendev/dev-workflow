@@ -56,12 +56,13 @@ the lean budget is protecting.
      duplicate or overwrite it; complement it.
 2. Draft `conventions.md` using the section structure from the plugin template
    (Domain / Tech stack / Architecture / Coding conventions / Testing / Testing
-   contract / Simplicity contract / Domain-specific correctness rules / Security
-   focus / Workflow files). Fill each section from what you observed; mark anything
-   uncertain as an assumption. Copy the **Simplicity contract** and **Testing
-   contract** sections verbatim from the template in BOTH paths (observed project
-   conventions and greenfield default) — they are standing constraints, not
-   fallback baselines. Never rephrase, soften, or drop them.
+   contract / Simplicity contract / Readability contract / Domain-specific
+   correctness rules / Security focus / Workflow files). Fill each section from what
+   you observed; mark anything uncertain as an assumption. Copy the **Simplicity
+   contract**, **Readability contract** and **Testing contract** sections verbatim
+   from the template in BOTH paths (observed project conventions and greenfield
+   default) — they are standing constraints, not fallback baselines. Never
+   rephrase, soften, or drop them.
 3. Draft `project-map.md` using the plugin template's sections (Module map /
    Existing features / Shared building blocks / Extension points / Known gotchas
    / Glossary). Fill it from the survey in step 1.

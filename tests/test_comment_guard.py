@@ -1,6 +1,7 @@
 """Comment guard: added comments that cite the workflow, narrate the diff or talk
-to the reviewer are denied; density is capped by the file's own habits; and
-everything the guard cannot judge mechanically is left alone."""
+to the reviewer are denied; density is capped by the file's own habits (zero for a
+comment-free or new file); no comment block runs past two lines; and tool
+directives are never counted."""
 import json
 import sys
 
@@ -87,11 +88,18 @@ LEGITIMATE = [
 ]
 
 
+def floor(tmp_path, n):
+    (tmp_path / ".dev-workflow").mkdir(exist_ok=True)
+    (tmp_path / ".dev-workflow" / "comment-guard.json").write_text(
+        json.dumps({"density": {"floor": n}}))
+
+
 @pytest.mark.parametrize("comment", LEGITIMATE)
-def test_real_comments_are_allowed(tmp_path, comment):
-    # A guard that cries wolf gets switched off. Comments that carry a constraint,
-    # a caveat or a non-obvious reason must pass untouched — including ones that
-    # merely CONTAIN a word the patterns look for ("phase 2 of the handshake").
+def test_real_comments_are_not_mistaken_for_noise(tmp_path, comment):
+    # With the density floor raised out of the way, a comment that carries a
+    # constraint must pass the NOISE patterns — including one that merely CONTAINS
+    # a word they look for ("phase 2 of the handshake").
+    floor(tmp_path, 1)
     src = tmp_path / "src.py"
     src.write_text("def f():\n    return 1\n")
     assert hook_json(run(edit(src, f"def f():\n    {comment}\n    return 2\n"), tmp_path)) is None, comment
@@ -196,36 +204,104 @@ def test_dense_comment_block_on_a_terse_file_is_denied(tmp_path):
     new = ("def g():\n"
            + "".join(f"    # explanation line {i}\n" for i in range(9))
            + "    return 1\n")
-    proc = run(edit(src, new), tmp_path)
-    assert denied(proc)
-    assert "comment lines" in reason(proc)
+    assert denied(run(edit(src, new), tmp_path))
 
 
-def test_the_same_block_is_allowed_on_a_heavily_commented_file(tmp_path):
-    # The cap is the FILE's own density, not a fixed ratio — that is the only way
-    # to enforce "match the surrounding style" without being wrong for one of the
-    # two kinds of file.
+COMMENTED = "".join(f"# reason {i} the code below is written this way\n"
+                    f"def f{i}():\n    return {i}\n" for i in range(12))
+
+
+def test_a_heavily_commented_file_keeps_granting_its_own_density(tmp_path):
+    # The cap is the FILE's own density, not a fixed ratio — a codebase that
+    # genuinely documents keeps its habit, one short comment at a time.
     src = tmp_path / "src.py"
-    src.write_text("".join(f"# reason {i} the code below is written this way\n"
-                           f"def f{i}():\n    return {i}\n" for i in range(12)))
+    src.write_text(COMMENTED)
     new = ("def g():\n"
-           + "".join(f"    # explanation line {i}\n" for i in range(9))
-           + "".join(f"    step{i} = {i}\n" for i in range(18))
+           + "".join(f"    # reason {i}\n    step{i} = {i}\n    more{i} = {i}\n" for i in range(4))
            + "    return 1\n")
     assert hook_json(run(edit(src, new), tmp_path)) is None
 
 
-def test_one_necessary_caveat_still_passes_on_a_terse_file(tmp_path):
-    # The floor, and all of it: the default is no comment, so what survives is the
-    # single line for something that genuinely cannot be said any other way.
+def test_a_long_block_is_denied_even_on_a_heavily_commented_file(tmp_path):
+    # Density used to let an essay through wherever essays already were — which is
+    # how they compounded. A paragraph is a design argument, not a caveat.
+    src = tmp_path / "src.py"
+    src.write_text(COMMENTED)
+    new = ("def g():\n"
+           + "".join(f"    # explanation line {i}\n" for i in range(3))
+           + "".join(f"    step{i} = {i}\n" for i in range(18))
+           + "    return 1\n")
+    proc = run(edit(src, new), tmp_path)
+    assert denied(proc)
+    assert "block too long" in reason(proc)
+
+
+def test_block_markers_do_not_count_toward_the_block_limit(tmp_path):
+    src = tmp_path / "src.ts"
+    src.write_text("".join(f"// reason {i}\nexport const x{i} = {i}\n" for i in range(12)))
+    new = "/**\n * Seconds, not millis: the vendor API says so.\n */\nexport const ttl = 60\n"
+    assert hook_json(run(edit(src, new), tmp_path)) is None
+
+
+def test_separate_blocks_are_not_joined(tmp_path):
+    lines = "// one\n// two\nconst a = 1\n/**\n * three\n */\nconst b = 2\n".splitlines()
+    flags = comment_guard.scan(lines, comment_guard.SYNTAX[".ts"])
+    comments = [(i, comment_guard.comment_text(l, comment_guard.SYNTAX[".ts"]))
+                for i, (l, f) in enumerate(zip(lines, flags)) if f]
+    assert comment_guard.longest_block(comments) == ["one", "two"]
+
+
+def test_max_block_is_configurable(tmp_path):
+    (tmp_path / ".dev-workflow").mkdir()
+    (tmp_path / ".dev-workflow" / "comment-guard.json").write_text(
+        json.dumps({"max_block": 0, "density": {"floor": 10}}))
+    src = tmp_path / "src.py"
+    src.write_text(TERSE)
+    new = "def g():\n" + "".join(f"    # line {i}\n" for i in range(5)) + "    return 1\n"
+    assert hook_json(run(edit(src, new), tmp_path)) is None
+
+
+def test_a_single_comment_on_a_terse_file_is_denied_by_default(tmp_path):
+    # The default is NO comment: a comment-free file grants nothing.
+    src = tmp_path / "src.py"
+    src.write_text(TERSE)
+    new = "def g():\n    # The vendor SDK mutates this in place.\n    return 1\n"
+    assert denied(run(edit(src, new), tmp_path))
+
+
+def test_the_floor_can_be_raised_per_project(tmp_path):
+    floor(tmp_path, 1)
     src = tmp_path / "src.py"
     src.write_text(TERSE)
     new = "def g():\n    # The vendor SDK mutates this in place.\n    return 1\n"
     assert hook_json(run(edit(src, new), tmp_path)) is None
 
 
+@pytest.mark.parametrize("pragma", [
+    "// eslint-disable-next-line no-console",
+    "// @ts-expect-error vendor types are wrong",
+    "/* istanbul ignore next */",
+    "// prettier-ignore",
+    "//go:build linux",
+])
+def test_tool_directives_are_not_comments(tmp_path, pragma):
+    src = tmp_path / "src.ts"
+    src.write_text("export const a = 1\n")
+    assert hook_json(run(edit(src, f"{pragma}\nexport const a = 2\n"), tmp_path)) is None
+
+
+@pytest.mark.parametrize("pragma", [
+    "#!/usr/bin/env python3", "# -*- coding: utf-8 -*-", "x = f()  # noqa: E501",
+    "# type: ignore", "# pylint: disable=unused-import",
+])
+def test_python_directives_are_not_comments(tmp_path, pragma):
+    src = tmp_path / "src.py"
+    src.write_text("x = 1\n")
+    line = pragma if pragma.startswith("x") else pragma + "\nx = 2"
+    assert hook_json(run(edit(src, line + "\n"), tmp_path)) is None
+
+
 def test_a_second_comment_line_on_a_terse_file_is_denied(tmp_path):
-    # Where "default to no comment" actually bites. Two lines used to be free.
     src = tmp_path / "src.py"
     src.write_text(TERSE)
     new = ("def g():\n"
@@ -246,26 +322,28 @@ def test_a_terse_file_grants_nothing_beyond_the_floor_however_big_the_edit(tmp_p
     assert denied(run(edit(src, new), tmp_path))
 
 
-def test_new_file_header_is_not_charged(tmp_path):
-    # Module docstrings and licence headers are conventional; charging a new file
-    # for its own header would make every well-documented module a denial.
-    (tmp_path / "sibling.py").write_text(
-        "".join(f"# reason {i}\ndef f{i}():\n    return {i}\n" for i in range(12)))
+def test_new_file_header_is_charged(tmp_path):
+    # A header docstring on a new file is where the design essay moves once the
+    # body is policed; it gets no free pass.
     src = tmp_path / "new.py"
-    content = ('"""' + "\n".join(f"header line {i}" for i in range(12)) + '"""\n'
+    content = ('"""Loads the ledger."""\n'
                + "".join(f"def f{i}():\n    return {i}\n" for i in range(6)))
-    assert hook_json(run(write(src, content), tmp_path)) is None
-
-
-def test_new_file_matches_its_siblings_density(tmp_path):
-    # With no file of its own to compare against, "match the surrounding code"
-    # means the directory. Terse neighbours -> a terse budget.
-    (tmp_path / "sibling.py").write_text(TERSE)
-    src = tmp_path / "new.py"
-    content = ("def g():\n"
-               + "".join(f"    # explanation line {i}\n" for i in range(9))
-               + "    return 1\n")
     assert denied(run(write(src, content), tmp_path))
+
+
+def test_new_file_does_not_inherit_its_siblings_density(tmp_path):
+    # Borrowing the directory's density is how agent-written comments compounded:
+    # every commented file raised the budget of the next one.
+    (tmp_path / "sibling.py").write_text(COMMENTED)
+    src = tmp_path / "new.py"
+    content = "def g():\n    # a reason\n    return 1\n"
+    assert denied(run(write(src, content), tmp_path))
+
+
+def test_new_file_with_only_a_licence_header_passes(tmp_path):
+    src = tmp_path / "new.ts"
+    content = "// SPDX-License-Identifier: MIT\nexport const a = 1\n"
+    assert hook_json(run(write(src, content), tmp_path)) is None
 
 
 # --- escape hatches and failure modes ---------------------------------------
@@ -296,6 +374,7 @@ def test_config_allowlist_exempts_a_pattern(tmp_path):
     src.write_text("def f():\n    return 1\n")
     proc = run(edit(src, "# Phase 2 of the handshake needs the cert\ndef f():\n    return 2\n"),
                tmp_path)
+    # Exempt from the density budget too, or the allowlist is no escape at floor 0.
     assert hook_json(proc) is None
 
 

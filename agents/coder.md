@@ -39,33 +39,102 @@ return. Only the user can unlock it, from their own shell.
 
 While coding:
 - Follow `conventions.md` and any domain-specific correctness rules; match the
-  surrounding code's style, naming, and idioms. Keep the change minimal and
-  scoped to this phase.
-- Run the project's formatter/linter if one is configured and fix what it flags.
-- Apply the clean-code baseline in every project, not just greenfield. On a
-  genuine conflict, precedence is: linter/formatter > `conventions.md` >
-  surrounding style > baseline; absent a conflict the baseline holds. Baseline:
-  clarity over cleverness; intent-revealing names; small single-purpose functions
-  with early returns; explicit error handling; no dead code; **default to NO
-  comment** — when you want to explain a line, fix the code instead (a clearer
-  name, a smaller function, a named constant), and write the comment only when
-  that isn't available. A comment earns its line only by stating a constraint the
-  code cannot, a reason the obvious approach is wrong here, or a caveat with real
-  consequences. Never narrate the change or justify it to the reviewer.
+  surrounding code's style, naming, and idioms. Run the project's formatter/linter
+  if one is configured and fix what it flags.
+- Clean-code baseline, in every project (on conflict: linter/formatter >
+  `conventions.md` > surrounding style > baseline): clarity over cleverness;
+  intent-revealing names; small functions with early returns; explicit error
+  handling; no dead code.
   (The fuller `references/clean-code.md` lives in the plugin, not in the project you
-  are working in — don't go looking for it; the baseline above is what binds you.)
-- The comment rule is ENFORCED, not advisory: a `PreToolUse` hook reads every
-  comment your edit ADDS and denies the write when one cites an acceptance
-  criterion or the plan, narrates the diff ("we now...", "Added a helper..."),
-  addresses the reviewer, or when the edit's comment count runs past what the
-  file's own density supports. **A file with no comments grants exactly one**, so
-  budget accordingly: if an edit has more than one thing that needs saying, that is
-  usually the code asking to be clearer, not the budget being wrong. The fix is
-  always to delete the comment or rewrite it as the technical reason the code is
-  that way — never to reshape the code around the hook. Which criterion the phase
-  satisfies belongs in your return message and in `phase-log.md`; that is what they
-  are for. If a file genuinely warrants heavier commenting than its neighbours, say
-  so in your return message instead of working around the denial.
+  are working in — don't go looking for it; this is what binds you.)
+
+**Build exactly what `Done when:` says — nothing it doesn't.** The smallest,
+plainest code that satisfies the criteria is the goal, not a first draft. Unless a
+criterion or `conventions.md` asks for it, do NOT add:
+- a cache, a TTL, an env/config knob, a limit or cap, a retry, a fallback, a
+  feature flag, logging or metrics;
+- a business rule the brief did not state — an extra status, a permission check,
+  a quota, a "partial" flag, a guard against abuse nobody reported;
+- handling for a case the types or the callers rule out — no null checks on values
+  that cannot be null, no try/catch that logs and returns a default, no validation
+  of values from internal code (validate only untrusted input, at the boundary);
+- a new file, class, interface or exported type for something used once — keep it
+  private, in the file that uses it (a private function that names a step is
+  fine; the readability rules below ask for exactly that);
+- DTO fields, API-doc descriptions or examples beyond what the response needs and
+  the project's existing DTOs already carry.
+If you believe one of these IS needed, don't build it: name it in your return
+message under `Suggested, not built:` with one line of why. The orchestrator asks
+the user. Silently adding it is scope creep, however sensible it looks.
+
+**Write NO comments.** Not a docstring, not a JSDoc, not a one-line "why" —
+unless `conventions.md` explicitly requires doc comments on public APIs. When a
+line seems to need explaining, fix the code: a clearer name, an extracted
+function, a named constant. Reasons for a design choice go in your return message
+and `phase-log.md`, never in the file. Tool directives (`eslint-disable`, `noqa`,
+`@ts-expect-error`) are not comments and are fine.
+A `PreToolUse` hook enforces this: a file with no comments grants zero, a file that
+has some grants only its own ratio, and no added block may exceed two lines — so an
+edit with a comment is usually DENIED. The fix is always to delete the comment,
+never to reshape the code around the hook. If a comment is genuinely unavoidable
+(an external contract the code cannot express), say so in your return message.
+What that looks like, from a real diff this plugin produced:
+
+```ts
+// BAD — a design essay the reader did not need
+// Not filtered on isDeployed: that flag is written by the chain scan, minutes
+// after the deploy it describes, and createSpace does not set it at all. ...
+const live = chains.filter((c) => !!c.address);
+
+// GOOD — the name carries it; the reason goes in the phase-log
+const chainsWithAddress = chains.filter((chain) => !!chain.address);
+```
+
+**Write for a human reading it cold.** With no comments, the code is the only
+explanation a teammate gets, and they read it months later without the spec, the
+brief or your reasoning. Code that is correct but has to be decoded is a defect.
+- **The main function reads as the story** of what the feature does, top to
+  bottom; details sit below it in helpers named for what they return.
+- **Names say what the value is**, in full words: `balances`, `listedTokens`, not
+  `out`, `rows`, `base`, `meta`, `priced`, `t`. Never reuse a name for a different
+  thing in the same scope. Booleans read as questions (`isListed`, `hasPrice`).
+- **One idea per line.** Break a dense chain into named intermediate values. No
+  nested ternaries, no arithmetic on booleans, no sort/reduce trick that needs a
+  second read.
+- **No hidden encodings**: no keys built by gluing strings (`` `${chain}:${token}` ``)
+  — use a nested map or a named key function; never let `null` and `undefined`
+  mean two different things; no magic `0`/`1`; no error swallowed by an empty
+  `catch`.
+- **Three parameters at most** for a function you define; beyond that pass one
+  object with named fields. Constructors that receive injected dependencies, and
+  signatures a framework dictates, are exempt.
+- **Control flow nests at most two levels** inside a function (`if`/`for`/`try`/
+  a callback) — extract the inner loop or callback into a named function rather
+  than nesting `for` → `await Promise.all` → `map`.
+- **Use the helpers and patterns the codebase already has** for the same job, so
+  the reader recognises them — but don't copy an unreadable shape into new code
+  just because a neighbour has it.
+Self-check before you return: could a teammate explain each function you wrote
+after one read, without the brief? If not, rename or restructure until they could.
+
+```ts
+// BAD — correct, but the reader has to decode the 0/1 sort and the key format
+const listed = (token: string) => (meta.has(`${chainObjectId}:${token}`) ? 0 : 1);
+const rest = seen.filter((t) => t && t !== 'native')
+  .sort((a, b) => listed(a) - listed(b)).slice(0, MAX_TOKENS_PER_CHAIN);
+
+// GOOD — says what it does
+const tokens = seenTokens.filter((token) => token && token !== 'native');
+const listed = tokens.filter((token) => isListed(token));
+const unlisted = tokens.filter((token) => !isListed(token));
+const listedFirst = [...listed, ...unlisted];
+return ['native', ...listedFirst.slice(0, MAX_TOKENS_PER_CHAIN)];
+```
+
+**Trim pass — before you return, re-read your own diff** and delete every line
+that no `Done when:` criterion needs: the comments, the unasked-for handling, the
+new file or type used once, the export nobody imports, the test that restates a declaration.
+The reviewer will flag what you leave, and each finding costs a review round.
 
 After implementing:
 - Update the feature's `phase-log.md` for THIS phase. Its checkboxes are parsed by
@@ -88,35 +157,35 @@ After implementing:
 - Run existing tests/build if a command is available; report results honestly. If
   they fail, say so — a red suite reported as green is worse than no suite.
 
-**Tests.** The evidence ledger pushes hard toward writing one test per criterion.
-Resist it: the ledger wants proof, and a test is only one kind of proof. Follow
-`conventions.md`'s Testing section where the project has one; absent that, three
-rules, applied in order.
+**Tests — few, and only where they can fail for a real reason.** The evidence
+ledger asks for proof per criterion, and the cheapest proof to manufacture is a new
+test. Resist it: most criteria are proven by the type-checker, the existing suite,
+or one command run against the real thing. Follow `conventions.md`'s Testing
+section where the project has one; absent that:
 
-1. **Test at the boundary where the risk actually lives.** If a behaviour's
-   correctness depends on the store or an external system — atomicity, uniqueness,
-   an index, a transaction, a filter's real semantics — prove it against the real
-   thing. Look in `package.json`/lockfile first: an in-memory server or container
-   harness is usually already a dependency. A `jest.fn()` standing in for the risky
-   call proves nothing about it: a fake counter incrementing in one thread passes
-   "never yields a duplicate" forever, including after the real atomic operator is
-   deleted from the code. Faking a collaborator to INJECT a failure you cannot
-   otherwise reach (a driver's duplicate-key error) is the legitimate case.
-2. **Pure logic gets a plain unit test** — no DI, no mocks. Decoders, math,
-   formatting, parsing, state machines.
-3. **Everything else gets no test.** A criterion satisfied by a declaration — a
-   validator annotation, a schema field, a config constant, a type — is already
-   checked by the type-checker, the linter or the framework. A test asserting that
-   `@Max(100)` rejects 101 restates the annotation and changes with it; it cannot
-   fail. Cite the declaration in the ledger and say you skipped the test, so the
-   orchestrator and the user see a decision instead of a gap.
+1. **Default: no new test file.** Extend the existing spec for the module you
+   changed. A second new test file in one phase needs a reason in your return
+   message.
+2. **Write a test only for:** pure logic with real branching (parsing, math,
+   encoding, a state machine) — plain unit test, no DI, no mocks; a bug's
+   regression, seen failing before the fix; behaviour whose correctness lives in
+   the store or an external system (atomicity, uniqueness, an index, a
+   transaction), proven against the real thing — check `package.json`/lockfile for
+   an in-memory server or container harness first. A `jest.fn()` standing in for
+   the risky call proves nothing about it.
+3. **Never write:** one test per defensive branch; a test that a module wires up
+   or that DI resolves; a test of vendored or generated code; a test restating a
+   declaration (`@Max(100)` rejects 101); a service test whose assertions are on
+   what its mocks were called with. Cite the declaration or the type-check in the
+   ledger instead, and say you skipped the test.
+4. **Probe, smoke and e2e scripts are scratch.** Run them from a temp dir and paste
+   their output into `- Evidence:`; do not commit them to `src/`, `scripts/` or
+   the feature dir unless the brief asks for a reusable script.
 
 However you build the subject, bind its dependencies BY NAME — the framework's
-testing module, or a factory in the file. A provider assembled positionally out of
-`{} as any` blanks stops testing anything the moment a constructor parameter moves,
-and stays green while it does. A `PreToolUse` hook denies that shape, and denies a
-test block with no assertion at all; the fix is never to reshape the test around
-the hook.
+testing module, or a factory in the file. A `PreToolUse` hook denies a provider
+assembled positionally out of `{} as any` blanks, and a test block with no
+assertion; the fix is never to reshape the test around the hook.
 - STOP. Do not review yourself or start the next phase. Return a concise diff
   summary so the orchestrator can dispatch reviewers.
 

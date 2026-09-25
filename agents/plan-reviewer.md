@@ -48,6 +48,13 @@ Attack the plan on these axes:
   `conventions.md`; it binds the plan, not just the code. Also flag work nobody
   asked for that crept in: unrelated refactors, docs, monitoring, migrations the
   feature can work without.
+- **Invented business rules**: a criterion in `spec.md` 1b, or a plan step, that
+  the user never asked for — a limit, cap, quota, extra status, permission, cache,
+  abuse guard. Trace each back to the request; one that does not trace is a
+  BLOCKING finding whose fix is to move it to `Suggested, not built:`.
+- **Test weight**: a plan that budgets a test per criterion, new test files where
+  the module's existing spec would do, wiring tests, or committed probe/e2e
+  scripts. Proof is not the same as a new test.
 - **Weight vs payload**: compare the machinery (phase count, new components) with
   what the feature actually delivers, using the orchestrator's diff estimate. If a
   small change has grown a multi-phase plan, say so explicitly and propose the

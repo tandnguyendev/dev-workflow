@@ -145,6 +145,7 @@ def comment_section(root):
         Knob("density.floor", ["density", "floor"], cfg["floor"], comment_guard.FLOOR),
         Knob("density.min_ratio", ["density", "min_ratio"], cfg["min_ratio"],
              comment_guard.MIN_RATIO),
+        Knob("max_block", ["max_block"], cfg["max_block"], comment_guard.MAX_BLOCK),
         Knob("allow", ["allow"], [p.pattern for p in cfg["allow"]], []),
     ]
 
@@ -305,6 +306,7 @@ TARGETS = {
         "enabled": (["enabled"], bool),
         "density.floor": (["density", "floor"], int),
         "density.min_ratio": (["density", "min_ratio"], float),
+        "max_block": (["max_block"], int),
     }),
     "test-guard": ("test-guard.json", {
         "enabled": (["enabled"], bool),
@@ -435,7 +437,8 @@ def write_json(path, obj, note):
 USAGE = ("usage: config.py show\n"
          "       config.py set <key> <value>\n"
          "keys:  comment-guard.enabled | comment-guard.density.floor |\n"
-         "       comment-guard.density.min_ratio | test-guard.enabled |\n"
+         "       comment-guard.density.min_ratio | comment-guard.max_block |\n"
+         "       test-guard.enabled |\n"
          "       test-guard.checks.fakes | test-guard.checks.assertions |\n"
          "       test-guard.max_empty_args | models.<agent>\n"
          "value: on | off | a number | a model alias | default")

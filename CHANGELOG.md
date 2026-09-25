@@ -5,6 +5,50 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Simpler code, by default.** Agents kept adding what nobody asked for: caches
+  with env-configured TTLs, caps against abuse nobody reported, "partial" flags,
+  try/catch that logs and returns a default. Two sources fed it. The orchestrator
+  invented business rules while writing acceptance criteria, and `code-reviewer`
+  asked for handling of every empty/null/overflow case, reachable or not.
+  - Every acceptance criterion must now trace to something the user said. Extras
+    go to a `Suggested, not built:` line in `spec.md` and are built only on the
+    user's word. `coder` gets an explicit don't-add list and a trim pass over its
+    own diff before returning.
+  - `code-reviewer` flags an edge case only when a real caller can reach it, and
+    treats over-building as a first-class finding whose fix is deletion (BLOCKING
+    when it adds surface). `plan-reviewer` blocks invented business rules.
+  - `security-scan-fast` asks for validation only of untrusted input at a trust
+    boundary.
+  - The architect panel always runs simplicity-first. Performance-first and
+    risk-first run only on a named signal.
+- **Readable code, not decodable code.** Agent code was correct but had to be
+  decoded: string-glued map keys, `out`/`rows`/`base` names (one reused for two
+  things), a 0/1 sort trick, meaning carried by `null` vs `undefined`, five
+  positional parameters, loops nesting `await Promise.all` → `map`. With comments
+  now at zero, the code is the only explanation, so this matters more. `coder`
+  gets concrete readability rules, a before/after from a real diff, and a
+  "could a teammate explain this cold?" self-check. `code-reviewer` treats a
+  broken rule as BLOCKING. New **Readability contract** section in
+  `conventions.md`, copied verbatim by `init`.
+- **Fewer tests.** The "one artifact per criterion" rule was being met with one new
+  spec file per criterion and one test per defensive branch. The default is now no
+  new test file per phase: extend the module's existing spec. Tests are written for
+  real branching logic, bug regressions and store-level behaviour only. Wiring
+  tests, tests of vendored or generated code, and committed probe/smoke scripts are
+  out, and `code-reviewer` recommends deleting them.
+- **Comment guard: zero by default.** A comment-free or new file now grants no
+  comment lines (was one). New files no longer inherit their siblings' density,
+  which let agent-written comments compound across a directory. New `max_block`
+  (default 2) caps any added comment block, whatever the density, which ends the
+  design-essay comment. Tool directives (`eslint-disable`, `noqa`,
+  `@ts-expect-error`, shebangs, licence lines) are never counted. `allow` patterns
+  now exempt a comment from the budget too. A new file's header docstring is no
+  longer free. Restore the old behaviour with `{"density": {"floor": 1},
+  "max_block": 0}`.
+
 ## [0.12.0] - 2026-08-26
 
 ### Added

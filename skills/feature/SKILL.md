@@ -125,6 +125,12 @@ different.
    These are what Stage 4's Evidence ledger cites one artifact per, and what
    `plan.md`'s per-phase `Done when:` lines come from. Two to five is normal; a
    trivial change may have one.
+   **Every criterion must trace to something the user said.** Do not invent
+   business rules: a limit, a cap, a quota, an extra status, a permission, a
+   "partial" flag, an abuse guard, a cache. Each one you write becomes code, tests
+   and review rounds, and none of it was asked for. If you think one is genuinely
+   needed, list it in `spec.md` 1c under `Suggested, not built:` — the user opts
+   in with a word, and silence means it is not built.
 3. **Surface conflicts with what exists** — from the map and the survey. "The orders
    endpoint already caps at 50; do you want pagination on top of that cap or
    replacing it?" is the kind of question only someone who read the code can ask,
@@ -133,7 +139,9 @@ different.
    round, at most 3–4 questions, the ones whose answers actually fork the design.
    For everything else **state an assumption instead of asking** — an assumption in
    writing is faster for the user than a question, because vetoing takes one word and
-   silence means yes. Record them in `spec.md` section 1c.
+   silence means yes. Record them in `spec.md` section 1c. An assumption picks
+   between readings of the request; it never ADDS behaviour — that is a suggestion,
+   and suggestions are not built unless the user says so.
    Do NOT ask: implementation details the user has no stake in, anything the code
    already answers (go read it), or ceremonial questions ("should I add tests?" —
    yes). An interrogation is a worse failure than a wrong assumption you stated,
@@ -228,8 +236,8 @@ feel like real features and most of them are twenty lines.
 | Tier | It is this tier only if you can name one of these | What actually runs |
 |---|---|---|
 | **trivial** | *(default)* one subsystem, one reviewable diff, no new interface, no new dependency, no new persistent state — a validation rule, an added field, a config value, a bug fix, a new parameter with a default | codebase survey (map excerpts + read the files) → propose inline → **1 phase** → `code-reviewer` (+ `security-scan-fast` if the surface warrants) → your approval. **No researcher, no panel, no plan-reviewer, no Stage 5.** |
-| **standard** | a new interface others will call (endpoint, command, screen, public function), OR new persistent state/schema, OR several files across one subsystem | survey, plus external research **only if there is a real external question** → 2-architect panel → plan + `plan-reviewer` → phases → Stage 5 only if the plan ended up with more than one phase |
-| **complex** | crosses a subsystem or trust boundary, OR changes a data model other code depends on, OR the design itself is security-sensitive, OR wide blast radius | full machinery — 3-architect panel, full final audit |
+| **standard** | a new interface others will call (endpoint, command, screen, public function), OR new persistent state/schema, OR several files across one subsystem | survey, plus external research **only if there is a real external question** → simplicity-first architect (+ one signalled angle) → plan + `plan-reviewer` → phases → Stage 5 only if the plan ended up with more than one phase |
+| **complex** | crosses a subsystem or trust boundary, OR changes a data model other code depends on, OR the design itself is security-sensitive, OR wide blast radius | full machinery — simplicity-first + the signalled angles, full final audit |
 
 **For a bug, the ROOT CAUSE sets the tier — not the severity of the symptom.** A
 production outage caused by a one-line off-by-one is still one reviewable diff and
@@ -279,9 +287,12 @@ read the `project-map.md` entries for the area and the files they name, so a
 Reads, not a subagent.
 
 ## Stage 2 — Solution options (independent panel)
-1. Spawn a `solution-architect` panel IN PARALLEL, sized by tier (3 complex / 2
-   standard / skip trivial). Give each a DIFFERENT angle (simplicity-,
-   performance-, risk-first) with the description + the acceptance criteria from
+1. Spawn a `solution-architect` panel IN PARALLEL. **Simplicity-first always
+   runs.** Add `performance-first` only when you can name a real load signal (a hot
+   path, a large data set, a latency budget), and `risk-first` only when the change
+   touches money, auth, a trust boundary or irreversible data. Standard tier with
+   no such signal is ONE architect; skip the panel for trivial. Give each a
+   DIFFERENT angle (simplicity-, performance-, risk-first) with the description + the acceptance criteria from
    `spec.md` 1b (an option is only valid if it satisfies them) + research summary + the
    existing-implementation survey and the building blocks / extension points from
    the map — independent context reduces single-thread bias, but an architect
@@ -396,7 +407,12 @@ For each phase in `plan.md`, in order:
    spec/plan.
 2. When it returns, run the reviews IN PARALLEL (freshly spawned) — hand each the
    changed files/diff and exact paths directly, never make them re-scan to find the
-   change:
+   change, plus the phase's `Done when:` (the code-reviewer needs it to judge what
+   is over-built). If the coder returned `Suggested, not built:` items, carry them
+   to the user at this phase's checkpoint — never build them on your own call.
+   Before the reviews, check the diff for files the phase should not leave behind:
+   probe/smoke/e2e scripts, backups, `.diff` dumps, handoff notes — in `src/`,
+   `scripts/` or the feature dir. Delete them unless the plan asked for them.
    - `code-reviewer` (logic/quality) — ALWAYS, every phase, every tier.
    - `security-scan-fast` (fast security pass) — ONLY when this phase touches a
      security-sensitive surface: auth/authz, input handling/parsing, crypto or
@@ -436,6 +452,13 @@ For each phase in `plan.md`, in order:
    phase (`Phase N: <title>`). Skip otherwise. Keeps the final-audit diff clean.
 
 ### One artifact per criterion is NOT one test per criterion
+**Test budget.** Default is NO new test file per phase: extend the changed module's
+existing spec. A test is written only for pure logic with real branching, a bug's
+regression, or store-level behaviour proven against the real store. Never one per
+defensive branch, never a wiring/DI test, never a test of vendored or generated
+code. If a phase's diff has more test lines than code lines, that is a signal to
+cut, not a sign of rigour.
+
 The evidence rule above is the strongest incentive in this workflow: the gate will
 not let the turn end without a citable artifact, and the cheapest artifact to
 manufacture is a new test. Left alone, that turns "2–5 acceptance criteria" into

@@ -21,11 +21,17 @@ Two deterministic checks, both applied ONLY to comment lines the edit ADDS:
    nothing.
 
 2. DENSITY — the number of comment lines added is capped at FLOOR plus the file's
-   OWN existing comment density. The default posture is no comment, so a file with
-   none grants exactly the floor: one line, for the caveat that genuinely cannot be
-   said any other way. A file that does comment keeps granting its own ratio, which
-   is what stops the rule from being wrong on a codebase that documents heavily —
-   no fixed ratio could serve both.
+   OWN existing comment density. FLOOR is 0: a file with no comments grants none,
+   and a new file grants none. The budget is never borrowed from sibling files —
+   that is how agent-written comments used to compound, each one raising the
+   allowance for the next file in the directory.
+
+3. BLOCK LENGTH — no single added comment block may carry more than MAX_BLOCK lines
+   of text, whatever the density. A multi-line comment is almost always a design
+   argument, and a design argument belongs in the commit message.
+
+Tool directives (`eslint-disable`, `noqa`, `@ts-expect-error`, shebangs, licence
+lines...) are not comments to a reader and are never counted or pattern-checked.
 
 Scope: files whose extension has a known comment syntax (so .md/.json/.yaml and
 every data format are untouched), outside `.dev-workflow/`. Pre-existing comment
@@ -42,6 +48,7 @@ Escape hatches, for the project that genuinely disagrees:
   .dev-workflow/comment-guard.json      {"enabled": false}
                                         {"allow": ["<regex>", ...]}
                                         {"density": {"floor": 3, "min_ratio": 0.2}}
+                                        {"max_block": 4}   (0 = no block cap)
 """
 import json
 import math
@@ -138,17 +145,30 @@ NOISE = [
 ]
 NOISE = [(re.compile(p, re.IGNORECASE), why) for p, why in NOISE]
 
+# Tool directives, not prose: a linter/type-checker/runtime reads them, and
+# denying one would leave no compliant move. Matched against the comment's text.
+PRAGMA = re.compile(
+    r"^(eslint[- ]|@ts-(ignore|expect-error|nocheck)|prettier-ignore|istanbul |c8 "
+    r"|noqa|type:\s*ignore|pylint:|pyright:|mypy:|fmt:\s*(on|off|skip)|isort:"
+    r"|rubocop:|frozen_string_literal|(vim?|en)?coding[:=]|nolint|go:|\+build|#?region\b|#?endregion\b"
+    r"|@(jest|vitest)-environment|@refresh|biome-ignore|deno-lint|swiftlint:"
+    r"|spdx-license-identifier|copyright\b|licensed under)",
+    re.IGNORECASE)
+
+
+def is_pragma(line, text):
+    return line.lstrip().startswith("#!") or bool(PRAGMA.search(text))
+
+
 # --- density defaults -------------------------------------------------------
-# The default posture is NO comment, so FLOOR is the single line that survives it:
-# a genuinely necessary caveat is never blocked by arithmetic alone, and nothing
-# past it comes free. MIN_RATIO is what a comment-FREE file grants on top — zero,
-# so a terse file stays terse while a file that genuinely comments keeps its ratio.
-FLOOR = 1
+# The default posture is NO comment: nothing comes free. A file that already
+# comments keeps granting its own ratio; one that does not grants nothing.
+FLOOR = 0
 MIN_RATIO = 0.0
+MAX_BLOCK = 2
 # Below this many real lines a file's own density is noise, not a style signal
 # (a 4-line file with 1 comment does not "have" a 25% convention).
 MIN_BASELINE = 20
-MAX_SIBLINGS = 5  # sampled to give a NEW file a density to match
 
 
 def deny(reason):
@@ -171,10 +191,11 @@ def read(path):
 
 
 def load_config(root):
-    """{'enabled', 'allow' (compiled), 'floor', 'min_ratio'} — defaults on any
+    """{'enabled', 'allow' (compiled), 'floor', 'min_ratio', 'max_block'} — defaults on any
     problem. A malformed config must not disable the guard silently, but it must
     not crash the edit either, so unreadable/invalid falls back to defaults."""
-    cfg = {"enabled": True, "allow": [], "floor": FLOOR, "min_ratio": MIN_RATIO}
+    cfg = {"enabled": True, "allow": [], "floor": FLOOR, "min_ratio": MIN_RATIO,
+           "max_block": MAX_BLOCK}
     if (os.environ.get("DEV_WORKFLOW_COMMENT_GUARD") or "").strip().lower() in (
             "off", "0", "false", "no"):
         cfg["enabled"] = False
@@ -202,6 +223,10 @@ def load_config(root):
             cfg["min_ratio"] = min(1.0, max(0.0, float(dens.get("min_ratio", MIN_RATIO))))
         except Exception:
             pass
+    try:
+        cfg["max_block"] = max(0, int(obj.get("max_block", MAX_BLOCK)))
+    except Exception:
+        pass
     return cfg
 
 
@@ -277,53 +302,21 @@ def density(text, syntax):
     habit by a third and denied edits that matched their file exactly."""
     lines = text.splitlines()
     flags = scan(lines, syntax)
-    comments = sum(1 for f in flags if f)
+    comments = sum(1 for l, f in zip(lines, flags)
+                   if f and (t := comment_text(l, syntax)) and not is_pragma(l, t))
     code = sum(1 for l, f in zip(lines, flags) if l.strip() and not f)
     if comments + code < MIN_BASELINE or code == 0:
         return None
     return comments / code
 
 
-def baseline(path, old_text, syntax):
-    """The comment density this edit should match: the file's own, or — for a file
-    too small or not yet written — the density of its siblings, which is what
-    "match the surrounding code" means for a brand-new file."""
-    if old_text:
-        d = density(old_text, syntax)
-        if d is not None:
-            return d
-    ext = os.path.splitext(path)[1].lower()
-    try:
-        directory = os.path.dirname(os.path.abspath(path))
-        names = sorted(n for n in os.listdir(directory)
-                       if n.lower().endswith(ext) and n != os.path.basename(path))
-    except Exception:
-        return None
-    ratios = []
-    for name in names:
-        if len(ratios) >= MAX_SIBLINGS:
-            break
-        body = read(os.path.join(directory, name))
-        if body:
-            d = density(body, syntax)
-            if d is not None:
-                ratios.append(d)
-    return sum(ratios) / len(ratios) if ratios else None
+def baseline(old_text, syntax):
+    """The comment density this edit may match: the file's own, never its
+    neighbours'. A new or small file has none, so it is held to the floor."""
+    return density(old_text, syntax) if old_text else None
 
 
-def leading_comment_run(flags):
-    """Length of the comment block a file OPENS with. Module docstrings, licence
-    headers and this very file's preamble are conventional and are not what the
-    density cap is aimed at, so a full-file Write is not charged for its header."""
-    n = 0
-    for f in flags:
-        if not f:
-            break
-        n += 1
-    return n
-
-
-def added_comments(new_text, old_text, syntax, charge_header):
+def added_comments(new_text, old_text, syntax):
     """-> (list of (index, comment_text), added_code_line_count).
 
     "Added" means the stripped line is not already somewhere in `old_text`. An edit
@@ -333,38 +326,51 @@ def added_comments(new_text, old_text, syntax, charge_header):
     lines = new_text.splitlines()
     flags = scan(lines, syntax)
     old = {l.strip() for l in (old_text or "").splitlines() if l.strip()}
-    skip = 0 if charge_header else leading_comment_run(flags)
     comments, code = [], 0
     for i, (line, is_comment) in enumerate(zip(lines, flags)):
         s = line.strip()
         if not s or s in old:
             continue
         if is_comment:
-            if i >= skip:
-                comments.append((i, comment_text(line, syntax)))
+            text = comment_text(line, syntax)
+            if not is_pragma(line, text):
+                comments.append((i, text))
         else:
             code += 1
     return comments, code
 
 
+def longest_block(comments):
+    """The longest run of consecutive added comment lines that carry text, as a
+    list of those texts. Bare `/**` and `*/` lines are markers, not content."""
+    best, run, prev = [], [], None
+    for i, text in comments:
+        if prev is None or i != prev + 1:
+            run = []
+        prev = i
+        if not text:
+            continue
+        run = run + [text]
+        if len(run) > len(best):
+            best = run
+    return best
+
+
 # --- payload ----------------------------------------------------------------
 
 def chunks(tool, tool_input, path):
-    """The (new_text, old_text, charge_header) pieces an edit writes.
-
-    `charge_header` is False only for a whole-file Write, the one case where the
-    text legitimately begins with a file header."""
+    """The (new_text, old_text) pieces an edit writes."""
     if tool == "Write":
-        return [(tool_input.get("content") or "", read(path) or "", False)]
+        return [(tool_input.get("content") or "", read(path) or "")]
     if tool == "Edit":
-        return [(tool_input.get("new_string") or "", tool_input.get("old_string") or "", True)]
+        return [(tool_input.get("new_string") or "", tool_input.get("old_string") or "")]
     if tool == "MultiEdit":
-        return [(e.get("new_string") or "", e.get("old_string") or "", True)
+        return [(e.get("new_string") or "", e.get("old_string") or "")
                 for e in (tool_input.get("edits") or []) if isinstance(e, dict)]
     if tool == "NotebookEdit":
         if (tool_input.get("cell_type") or "code") != "code":
             return []  # a markdown cell is prose, not source
-        return [(tool_input.get("new_source") or "", "", True)]
+        return [(tool_input.get("new_source") or "", "")]
     return []
 
 
@@ -428,15 +434,24 @@ def main():
     name = os.path.basename(path)
     elsewhere = where_it_belongs(root)
     total_comments, total_code = 0, 0
-    for new_text, old_text, charge_header in pieces:
+    for new_text, old_text in pieces:
         if not new_text.strip():
             continue
-        comments, code = added_comments(new_text, old_text, syntax, charge_header)
-        total_comments += len(comments)
+        comments, code = added_comments(new_text, old_text, syntax)
+        comments = [(i, t) for i, t in comments
+                    if not any(a.search(t) for a in cfg["allow"])]
+        total_comments += sum(1 for _, t in comments if t)
         total_code += code
+        block = longest_block(comments)
+        if cfg["max_block"] and len(block) > cfg["max_block"]:
+            deny(
+                f"Comment block too long in {name}: {len(block)} lines, the limit is "
+                f"{cfg['max_block']}:\n    " + "\n    ".join(block) + "\n\n"
+                "A comment that needs a paragraph is arguing a design decision. The "
+                f"argument belongs in {elsewhere}. Keep at most one short line — the "
+                "constraint itself — or none, and retry."
+            )
         for _, text in comments:
-            if any(a.search(text) for a in cfg["allow"]):
-                continue
             for pattern, why in NOISE:
                 if pattern.search(text):
                     deny(
@@ -457,26 +472,26 @@ def main():
 
     # Always the file as it stands ON DISK: an Edit's `old_string` is a fragment,
     # and the density of a fragment is not the density of the file.
-    base = baseline(path, read(path) or "", syntax)
+    base = baseline(read(path) or "", syntax)
     ratio = max(base if base is not None else 0.0, cfg["min_ratio"])
     allowance = max(cfg["floor"], math.ceil(total_code * ratio))
     if total_comments <= allowance:
         sys.exit(0)
 
     if base is None:
-        observed = "no comment density to compare against (new or small file)"
+        observed = "this file has no comments of its own (new, small, or comment-free)"
     else:
         observed = f"{name} currently sits at {round(base * 100)}%"
     deny(
         f"Too many comments for this edit: it adds {total_comments} comment lines "
         f"to {total_code} lines of code, and {observed}. The budget here is "
         f"{allowance}.\n\n"
-        "Match the file's existing comment density — a comment is worth its line "
-        "only when it says what the code cannot (a constraint, a non-obvious "
-        "reason, a caveat). Drop the ones that restate the code or explain the "
-        "change, keep the few that carry real information, and retry.\n"
-        "If this file genuinely warrants heavier commenting than its neighbours, "
-        "say so rather than quietly working around this."
+        "The default here is NO comment. Delete them: if a line needs explaining, "
+        "fix the code instead — a clearer name, a smaller function, a named "
+        "constant. Why the code is shaped this way belongs in "
+        f"{elsewhere}, not in the file.\n"
+        "If a comment is truly unavoidable (an external contract the code cannot "
+        "express), say so in your message rather than working around this."
     )
 
 

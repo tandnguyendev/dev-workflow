@@ -55,6 +55,9 @@ open only when a task needs them. (This note stays; the guidance blockquotes go.
 - Nothing else gets a test. A behaviour that is a declaration — a validator
   annotation, a schema field, a config constant, a type — is already enforced by
   the type-checker, the linter or the framework; a test restating it cannot fail.
+- Few tests: extend the module's existing spec rather than add a file; never a
+  test per defensive branch, a wiring/DI test, or a test of generated code.
+  Probe/smoke scripts are scratch — run them, paste the output, don't commit them.
 - Build the subject by NAME, never positionally out of empty placeholders.
   (The last two shapes are enforced by a hook. Turn it off for this project with
   `.dev-workflow/test-guard.json` -> `{"enabled": false}`.)
@@ -68,18 +71,34 @@ fallback. It applies on top of the conventions above, in every project.*
   a literal over a config system, straight-line code over a framework.
 - Match existing patterns; don't add libraries or layers the codebase doesn't
   already use.
-- Handle only errors that can actually occur here.
-- Default to NO comment: when a line needs explaining, fix the code first (a
-  clearer name, a smaller function, a named constant). A comment earns its line
-  only by stating a constraint the code cannot, a reason the obvious approach is
-  wrong here, or a caveat with real consequences. Never narrate the change or
-  justify it to the reviewer.
-  (Enforced by a hook, which denies the edit: a file with no comments grants ONE
-  comment line, and more has to be earned from the file's own density. Turn it off
-  for this project with `.dev-workflow/comment-guard.json` -> `{"enabled": false}`,
-  loosen it with `{"density": {"floor": 4, "min_ratio": 0.25}}`, or exempt a domain
-  phrase with `{"allow": ["<regex>"]}`.)
+- No business rule the request did not state — no extra limit, quota, status,
+  permission, cache or abuse guard. Suggest it; don't build it.
+- Handle only errors that can actually occur here; validate only untrusted input,
+  at the boundary. No checks for cases the types or callers rule out.
+- Write NO comments. When a line needs explaining, fix the code (a clearer name, a
+  smaller function, a named constant); the reason for a design choice goes in the
+  commit message, not the file.
+  (Enforced by a hook, which denies the edit: a comment-free or new file grants
+  zero comment lines, a commented file only its own ratio, and no added block may
+  run past two lines. Tool directives like `eslint-disable` are exempt. Loosen it
+  with `.dev-workflow/comment-guard.json` -> `{"density": {"floor": 1}}`, exempt a
+  phrase with `{"allow": ["<regex>"]}`, or turn it off with `{"enabled": false}`.)
 - Before adding anything beyond the literal request, STOP and ask — default to less.
+
+## Readability contract (always applies)
+*This section stays verbatim — it is not project-specific and is not a fallback.*
+- Code is written for a teammate reading it cold, without the spec or comments.
+  Correct code that has to be decoded is a defect.
+- Names in full words that say what the value is; never one name for two things;
+  booleans read as questions.
+- One idea per line: named intermediates over dense chains; no nested ternaries,
+  no arithmetic on booleans, no clever tricks.
+- No hidden encodings: no string-glued keys, never `null` and `undefined` meaning
+  two different things, no magic numbers, no empty `catch`.
+- At most three parameters on a function you define (injected constructors and
+  framework-dictated signatures are exempt); control flow nested at most two
+  levels; the entry function reads top to bottom, details below it in private
+  functions that name each step.
 
 ## Domain-specific correctness rules
 > Invariants that MUST hold for this domain. Examples by domain:
