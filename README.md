@@ -57,13 +57,15 @@ Working docs scaffold automatically under `.dev-workflow/features/<slug>/`; mult
 
 | Agent | Default model | Role |
 |-------|---------------|------|
-| `domain-researcher` | Haiku 4.5 | Domain/stack research (read-only + web) |
-| `solution-architect` | Haiku 4.5 | One solution option per angle (panel) |
+| `domain-researcher` | `haiku` | Domain/stack research (read-only + web) |
+| `solution-architect` | `haiku` | One solution option per angle (panel) |
 | `plan-reviewer` | inherit | Adversarial plan review before coding |
-| `coder` | Opus 4.8 | Implement one phase |
-| `code-reviewer` | Sonnet 5 | Logic/quality review |
-| `security-scan-fast` | Fable 5 | Fast per-phase security scan |
-| `security-audit` | Sonnet 5 | Deep final cross-phase audit |
+| `coder` | `opus` | Implement one phase |
+| `code-reviewer` | `sonnet` | Logic/quality review |
+| `security-scan-fast` | `fable` | Fast per-phase security scan |
+| `security-audit` | `sonnet` | Deep final cross-phase audit |
+
+Defaults are **aliases**, so each agent runs the newest model of its family without a plugin update. Want a fixed version (reproducible cost and behaviour)? Pin a full model ID per agent in `.dev-workflow/models.json`, below.
 
 **Pick your own models** — three ways, no plugin edits (which get overwritten on update):
 

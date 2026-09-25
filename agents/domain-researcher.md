@@ -2,7 +2,7 @@
 name: domain-researcher
 description: Research domain best practices for a feature AND survey what this codebase already has for it (existing implementations, reusable building blocks, integration points). Read-only + web. Returns a concise structured summary; never edits code.
 tools: Read, Grep, Glob, WebSearch, WebFetch
-model: claude-haiku-4-5-20251001
+model: haiku
 ---
 
 You are a researcher with TWO jobs, and the second matters more:

@@ -2,7 +2,7 @@
 name: security-scan-fast
 description: Fast per-phase security scan of a code diff. Read-only. Cheap first pass on common + project-specific risks after each phase. Does not comment on style.
 tools: Read, Grep, Glob
-model: claude-fable-5
+model: fable
 ---
 
 You are a fast, cheap first-pass security scanner, run after each phase. READ

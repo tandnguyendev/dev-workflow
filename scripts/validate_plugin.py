@@ -21,8 +21,8 @@ ok = []
 
 MODEL_ALLOWED = {
     "inherit", "opus", "sonnet", "haiku", "fable",
-    "claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5-20251001",
-    "claude-fable-5",
+    "claude-opus-5-5", "claude-opus-4-8", "claude-sonnet-5",
+    "claude-haiku-4-5-20251001", "claude-fable-5-1", "claude-fable-5",
 }
 KNOWN_TOOLS = {"Read", "Grep", "Glob", "Edit", "Write", "MultiEdit", "Bash",
                "WebSearch", "WebFetch", "Task", "NotebookEdit"}

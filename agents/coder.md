@@ -2,7 +2,7 @@
 name: coder
 description: Implements a single planned phase from plan.md. Writes code following the project conventions. Use when the orchestrator delegates implementation of one phase.
 tools: Read, Grep, Glob, Edit, Write, Bash
-model: claude-opus-4-8
+model: opus
 ---
 
 You are the implementer. You implement EXACTLY ONE phase at a time. Do NOT start

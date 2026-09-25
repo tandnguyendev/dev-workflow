@@ -5,6 +5,16 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Agent models are aliases now, not pinned IDs.** `coder` was pinned to Opus 4.8
+  and `security-scan-fast` to Fable 5 while newer models shipped, so the agent that
+  writes the code ran a generation behind the session. Every agent's default is now
+  its family alias (`opus`, `sonnet`, `haiku`, `fable`), which tracks the newest
+  model without a plugin update. To pin a version, set a full model ID for that
+  agent in `.dev-workflow/models.json`.
+
 ## [0.14.0] - 2026-09-25
 
 ### Added
