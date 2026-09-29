@@ -7,13 +7,13 @@
 <style>
   :root {
     --bg: #eef1f4; --surface: #ffffff; --ink: #1b2430; --muted: #6b7686; --line: #d5dbe3;
-    --done: #2e9e6b; --wait: #e8a317; --todo: #cfd6df; --focus: #2f5fd0;
+    --done: #2e9e6b; --wait: #e8a317; --todo: #cfd6df; --focus: #2f5fd0; --row-line: #e3e7ec;
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #151a21; --surface: #1d242d; --ink: #e6eaf0; --muted: #8f9aab; --line: #2c3541;
-      --done: #4cc28d; --wait: #f0b53a; --todo: #36404d; --focus: #7a9bff;
+      --done: #4cc28d; --wait: #f0b53a; --todo: #36404d; --focus: #7a9bff; --row-line: #2a323d;
       color-scheme: dark;
     }
   }
@@ -25,8 +25,6 @@
   .page { max-width: 980px; margin: 0 auto; padding: 24px 20px 48px; }
   .top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   h1 { font-size: 22px; font-weight: 650; margin: 0; }
-  h2 { font-size: 15px; font-weight: 600; margin: 28px 0 10px; }
-  .count { color: var(--muted); font-weight: 400; margin-left: 4px; }
   .muted { color: var(--muted); }
   .error { color: var(--wait); }
   .live { color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
@@ -39,20 +37,33 @@
   .segment.waiting { background: var(--wait); }
   .segment.current { background: linear-gradient(90deg, var(--done) 50%, var(--todo) 50%); }
 
-  .waiting-card { display: flex; align-items: center; justify-content: space-between; gap: 16px;
-                  background: var(--surface); border-left: 4px solid var(--wait); border-radius: 8px;
-                  padding: 14px 16px; margin-bottom: 10px; cursor: pointer; }
-  .waiting-card strong { font-weight: 600; }
-
-  .list { background: var(--surface); border-radius: 10px; overflow: hidden; }
-  .row { display: grid; grid-template-columns: 190px 1fr 130px 150px; gap: 12px; align-items: center;
-         padding: 11px 16px; border-top: 1px solid var(--line); cursor: pointer; }
-  .row:first-child { border-top: 0; }
-  .row.static { cursor: default; }
-  .row:hover:not(.static) { background: var(--bg); }
-  .row .project { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .row .state { text-align: right; }
-  .state.needs-approval { color: var(--wait); font-weight: 600; }
+  .summary { margin: 6px 0 20px; color: var(--muted); }
+  .summary b { color: var(--wait); font-weight: 600; }
+  .grid { columns: 2 460px; column-gap: 20px; }
+  .project { break-inside: avoid; background: var(--surface); border-radius: 10px; margin-bottom: 20px; overflow: hidden; }
+  .project-head { display: flex; align-items: baseline; gap: 10px; padding: 14px 16px 10px; min-width: 0; }
+  .project-name { font-size: 16px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .waiting-count { color: var(--wait); font-weight: 600; font-size: 13px; white-space: nowrap; }
+  .progress-count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .project-note { margin: 0; padding: 8px 16px 12px; border-top: 1px solid var(--row-line); }
+  .feature-row { display: grid; grid-template-columns: 10px 1fr 84px 156px; gap: 10px; align-items: center;
+                 padding: 8px 16px; border-top: 1px solid var(--row-line); cursor: pointer; }
+  .feature-row:hover { background: var(--bg); }
+  .feature-row.is-done { color: var(--muted); }
+  .marker { width: 8px; height: 8px; border-radius: 50%; }
+  .marker.waiting { background: var(--wait); }
+  .feature-title, .status { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status { text-align: right; }
+  .feature-row .track { width: 84px; gap: 3px; }
+  .feature-row .segment { width: auto; flex: 1 1 0; max-width: 26px; height: 6px; border-radius: 3px; }
+  .copy.resume { margin: 0; font-size: 12px; line-height: 1.4; padding: 0 10px; font-weight: 600;
+                 color: var(--wait); border-color: var(--wait); }
+  .done-toggle { display: block; width: 100%; text-align: left; padding: 8px 16px; border: 0;
+                 border-top: 1px solid var(--row-line); background: none; color: var(--muted); font: inherit;
+                 font-size: 13px; cursor: pointer; }
+  .all-done { color: var(--muted); margin: 4px 0 20px; }
+  .all-done-name { background: none; border: 0; padding: 0; font: inherit; color: var(--ink);
+                   text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 
   .scrim { position: fixed; inset: 0; background: rgb(10 14 20 / .35); }
   .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100%); background: var(--surface);
@@ -61,7 +72,7 @@
   @keyframes slide-in { from { transform: translateX(100%); } to { transform: none; } }
   @media (prefers-reduced-motion: reduce) { .drawer { animation: none; } }
   .drawer-head { display: flex; justify-content: space-between; gap: 12px; padding: 18px 20px 8px; }
-  .drawer-head h2 { margin: 0; font-size: 18px; }
+  .drawer-head h2 { margin: 0; font-size: 18px; font-weight: 600; }
   .drawer-head p { margin: 2px 0 0; }
   .close { background: none; border: 0; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer;
            padding: 2px 6px; border-radius: 6px; }
@@ -84,20 +95,38 @@
   summary { cursor: pointer; color: var(--muted); }
   .field-empty { color: var(--wait); font-weight: 600; }
   .notes dt { color: var(--muted); }
-  .notes dd { margin: 0 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .notes dd { margin: 0 0 6px; overflow-wrap: anywhere; }
   pre { background: var(--bg); border-radius: 6px; padding: 10px 12px; overflow: auto; font-size: 13px;
         white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0; }
   table { border-collapse: collapse; width: 100%; }
   th, td { text-align: left; padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { color: var(--muted); font-weight: 400; }
   code.command { font-family: ui-monospace, monospace; font-size: 12px; overflow-wrap: anywhere; }
+  .drawer.wide { width: min(760px, 100%); }
+  .doc { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+  .doc h1, .doc h2, .doc h3, .doc h4 { font-weight: 600; margin: 18px 0 6px; }
+  .doc h1 { font-size: 18px; }
+  .doc h2 { font-size: 16px; }
+  .doc h3, .doc h4 { font-size: 15px; }
+  .doc > :first-child { margin-top: 0; }
+  .doc p { margin: 0 0 10px; }
+  .doc ul, .doc ol { margin: 0 0 10px; padding-left: 20px; }
+  .doc li { margin: 2px 0; }
+  .doc li > ul, .doc li > ol { margin: 0; }
+  .doc code { font-family: ui-monospace, monospace; font-size: 12.5px; background: var(--bg);
+              padding: 1px 5px; border-radius: 4px; }
+  .doc pre code { padding: 0; background: none; }
+  .doc .table-wrap { overflow-x: auto; margin: 0 0 10px; }
+  .doc table { width: auto; }
+  .doc th, .doc td { border: 1px solid var(--line); padding: 6px 8px; overflow-wrap: break-word; }
+  .doc th { color: var(--ink); font-weight: 600; }
+  .doc blockquote { margin: 0 0 10px; padding-left: 10px; border-left: 3px solid var(--line); color: var(--muted); }
   .copy { margin-left: 6px; font: inherit; font-size: 13px; padding: 0 8px; cursor: pointer; color: var(--ink);
           border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
 
-  @media (max-width: 720px) {
-    .row { grid-template-columns: 1fr; gap: 4px; }
-    .row .state { text-align: left; }
-    .waiting-card { flex-direction: column; align-items: flex-start; }
+  @media (max-width: 560px) {
+    .feature-row { grid-template-columns: 10px 1fr 84px; }
+    .feature-row .status { grid-column: 2 / -1; text-align: left; }
   }
 </style>
 </head>
@@ -107,14 +136,10 @@
     <h1>Workflow board</h1>
     <span class="live"><span class="dot" id="dot"></span><span id="live">Connecting…</span></span>
   </header>
-  <section id="waiting-section" hidden>
-    <h2>Waiting for you<span class="count" id="waiting-count"></span></h2>
-    <div id="waiting"></div>
-  </section>
-  <section>
-    <h2>All projects<span class="count" id="project-count"></span></h2>
-    <div class="list" id="projects"></div>
-  </section>
+  <p class="summary" id="summary"></p>
+  <div class="grid" id="projects"></div>
+  <p class="all-done" id="all-done" hidden></p>
+  <div class="grid" id="done-projects"></div>
 </main>
 <div class="scrim" id="scrim" hidden></div>
 <aside class="drawer" id="drawer" hidden role="dialog" aria-modal="true" aria-labelledby="drawer-title">
@@ -127,7 +152,12 @@
 </aside>
 <script>
 const POLL_MS = 2000;
+const COPIED_MS = 1500;
+// Mirror the state strings row_state() returns in dashboard.py.
+const DONE_STATE = 'Done';
+const NO_PHASES_STATE = 'No phases yet';
 const TABS = ['Phases', 'Plan', 'Spec', 'Checkpoints', 'Config'];
+const WIDE_TABS = ['Plan', 'Spec'];
 const STEPS = [
   { label: 'Coded', ticks: ['coded'] },
   { label: 'Reviewed', ticks: ['code-reviewed', 'full code review'] },
@@ -143,6 +173,7 @@ let openFeature = null;
 let drawerKey = null;
 let selectedTab = 'Phases';
 let opener = null;
+const expandedDone = new Set();
 
 function el(tag, className, ...children) {
   const node = document.createElement(tag);
@@ -218,46 +249,138 @@ function listedFeatures(project) {
 }
 
 function renderOverview() {
-  const waitingCards = [];
-  for (const project of overviewProjects) {
-    for (const feature of listedFeatures(project).filter((f) => f.waiting)) {
-      waitingCards.push(waitingCard(project, feature));
-    }
+  renderSummary();
+  const activeProjects = overviewProjects.filter((project) => !isAllDone(project));
+  const doneProjects = overviewProjects.filter(isAllDone);
+  document.getElementById('projects').replaceChildren(...activeProjects.map(projectBlock));
+  renderAllDone(doneProjects);
+}
+
+function isAllDone(project) {
+  const features = listedFeatures(project);
+  return features.length > 0 && features.every((feature) => feature.state === DONE_STATE);
+}
+
+function featureGroups(features) {
+  const isDone = (feature) => feature.state === DONE_STATE;
+  const hasNoPhases = (feature) => feature.state === NO_PHASES_STATE;
+  return {
+    waiting: features.filter((feature) => feature.waiting),
+    inProgress: features.filter((feature) => !feature.waiting && !isDone(feature) && !hasNoPhases(feature)),
+    noPhases: features.filter(hasNoPhases),
+    done: features.filter(isDone),
+  };
+}
+
+function renderSummary() {
+  const summary = document.getElementById('summary');
+  const waitingFeatures = overviewProjects.flatMap((project) => listedFeatures(project).filter((f) => f.waiting));
+  if (waitingFeatures.length === 0) {
+    summary.replaceChildren('Nothing waits for your approval.');
+    return;
   }
-  document.getElementById('waiting-section').hidden = waitingCards.length === 0;
-  document.getElementById('waiting-count').textContent = waitingCards.length;
-  document.getElementById('waiting').replaceChildren(...waitingCards);
-  document.getElementById('project-count').textContent = overviewProjects.length;
-  document.getElementById('projects').replaceChildren(...overviewProjects.flatMap(projectRows));
+  const waitingProjects = overviewProjects.filter((project) => listedFeatures(project).some((f) => f.waiting));
+  const features = waitingFeatures.length === 1 ? ' feature waits' : ' features wait';
+  const projects = waitingProjects.length === 1 ? ' project' : ' projects';
+  summary.replaceChildren(el('b', '', waitingFeatures.length + features + ' for your approval'),
+    ' in ' + waitingProjects.length + projects);
 }
 
-function waitingCard(project, feature) {
-  const text = el('div', '',
-    el('div', '', el('strong', '', feature.title), el('span', 'muted', ' in ' + project.name)),
-    el('div', '', feature.current + ' is reviewed. Approve it or ask for changes.'));
-  const card = el('div', 'waiting-card', text, phaseTrack(feature.track));
-  return makeActivatable(card, (node) => openDrawer(project, feature, node));
-}
-
-function projectName(project) {
-  const name = el('span', 'project', project.name);
-  name.title = project.root;
-  return name;
-}
-
-function projectRows(project) {
+function projectBlock(project) {
+  const block = el('section', 'project', projectHeader(project));
   if (isFailed(project.features)) {
-    return [el('div', 'row static', projectName(project), unavailable(project.features), el('span', ''), el('span', ''))];
+    block.append(el('div', 'project-note', unavailable(project.features)));
+    return block;
   }
   if (project.features.length === 0) {
-    return [el('div', 'row static', projectName(project), el('span', 'muted', 'No features yet'), el('span', ''), el('span', ''))];
+    block.append(el('p', 'project-note muted', 'No features yet'));
+    return block;
   }
-  return project.features.map((feature) => {
-    const stateClass = feature.waiting ? 'state needs-approval' : 'state';
-    const row = el('div', 'row', projectName(project), el('span', '', feature.title),
-      phaseTrack(feature.track), el('span', stateClass, feature.state));
-    return makeActivatable(row, (node) => openDrawer(project, feature, node));
+  const groups = featureGroups(project.features);
+  const openFeatures = [...groups.waiting, ...groups.inProgress, ...groups.noPhases];
+  block.append(...openFeatures.map((feature) => featureRow(project, feature)));
+  if (groups.done.length > 0) block.append(...doneList(project, groups.done));
+  return block;
+}
+
+function projectHeader(project) {
+  const name = el('span', 'project-name', project.name);
+  name.title = project.root;
+  const header = el('div', 'project-head', name);
+  const groups = featureGroups(listedFeatures(project));
+  if (groups.waiting.length > 0) {
+    header.append(el('span', 'waiting-count', groups.waiting.length + ' waiting'));
+  }
+  if (groups.inProgress.length > 0) {
+    header.append(el('span', 'progress-count', groups.inProgress.length + ' in progress'));
+  } else if (groups.waiting.length === 0 && groups.noPhases.length > 0) {
+    header.append(el('span', 'progress-count', 'no phases yet'));
+  }
+  return header;
+}
+
+function featureRow(project, feature) {
+  const marker = el('span', feature.waiting ? 'marker waiting' : 'marker');
+  const title = el('span', 'feature-title', feature.title);
+  title.title = feature.title;
+  const status = el('span', 'status', feature.waiting ? resumeButton(project.resume) : feature.state);
+  status.title = feature.state;
+  const rowClass = feature.state === DONE_STATE ? 'feature-row is-done' : 'feature-row';
+  const row = el('div', rowClass, marker, title, phaseTrack(feature.track), status);
+  return makeActivatable(row, (node) => openDrawer(project, feature, node));
+}
+
+function resumeButton(resumeCommand) {
+  const button = copyButton(resumeCommand, 'Resume');
+  button.classList.add('resume');
+  button.setAttribute('aria-label', 'Resume session — needs approval');
+  button.addEventListener('keydown', (event) => event.stopPropagation());
+  button.addEventListener('click', (event) => event.stopPropagation());
+  return button;
+}
+
+function doneList(project, doneFeatures) {
+  const isExpanded = expandedDone.has(project.root);
+  const toggle = el('button', 'done-toggle', doneFeatures.length + ' done');
+  toggle.setAttribute('aria-expanded', String(isExpanded));
+  toggle.addEventListener('click', () => toggleDone(project.root, 'done-toggle'));
+  toggle.dataset.root = project.root;
+  const rows = isExpanded ? doneFeatures.map((feature) => featureRow(project, feature)) : [];
+  return [toggle, ...rows];
+}
+
+function renderAllDone(doneProjects) {
+  const line = document.getElementById('all-done');
+  line.hidden = doneProjects.length === 0;
+  const names = doneProjects.map((project) => {
+    const button = el('button', 'all-done-name', project.name);
+    button.title = project.root;
+    button.dataset.root = project.root;
+    button.setAttribute('aria-expanded', String(expandedDone.has(project.root)));
+    button.addEventListener('click', () => toggleDone(project.root, 'all-done-name'));
+    return button;
   });
+  const separatedNames = names.flatMap((name, index) => (index === 0 ? [name] : [', ', name]));
+  line.replaceChildren('All done: ', ...separatedNames);
+  const expanded = doneProjects.filter((project) => expandedDone.has(project.root));
+  document.getElementById('done-projects').replaceChildren(...expanded.map(doneProjectBlock));
+}
+
+function doneProjectBlock(project) {
+  const rows = project.features.map((feature) => featureRow(project, feature));
+  return el('section', 'project', projectHeader(project), ...rows);
+}
+
+function toggleDone(root, buttonClass) {
+  if (expandedDone.has(root)) {
+    expandedDone.delete(root);
+  } else {
+    expandedDone.add(root);
+  }
+  renderOverview();
+  const buttons = [...document.getElementsByClassName(buttonClass)];
+  const sameButton = buttons.find((button) => button.dataset.root === root);
+  if (sameButton) sameButton.focus();
 }
 
 function openDrawer(project, feature, node) {
@@ -265,6 +388,7 @@ function openDrawer(project, feature, node) {
   openFeature = { root: project.root, name: project.name, slug: feature.slug };
   drawerKey = null;
   selectedTab = 'Phases';
+  document.getElementById('drawer').classList.remove('wide');
   document.getElementById('drawer-title').textContent = feature.title;
   document.getElementById('drawer-subtitle').textContent = project.name;
   document.getElementById('drawer-body').replaceChildren(el('p', 'muted', 'Loading…'));
@@ -328,6 +452,7 @@ function renderTabs(state, track) {
     return tab;
   });
   document.getElementById('tabs').replaceChildren(...tabs);
+  document.getElementById('drawer').classList.toggle('wide', WIDE_TABS.includes(selectedTab));
   const body = document.getElementById('drawer-body');
   body.replaceChildren(...tabContent(state, track));
   for (const details of body.querySelectorAll('details')) {
@@ -337,8 +462,8 @@ function renderTabs(state, track) {
 
 function tabContent(state, track) {
   if (selectedTab === 'Phases') return phasesTab(state, track);
-  if (selectedTab === 'Plan') return [el('pre', '', state.plan || 'No plan.md yet.')];
-  if (selectedTab === 'Spec') return [el('pre', '', state.spec || 'No spec.md yet.')];
+  if (selectedTab === 'Plan') return [markdownDoc(state.plan || 'No plan.md yet.')];
+  if (selectedTab === 'Spec') return [markdownDoc(state.spec || 'No spec.md yet.')];
   if (selectedTab === 'Checkpoints') return checkpointsTab(state);
   return [isFailed(state.config) ? unavailable(state.config) : el('pre', '', state.config)];
 }
@@ -357,8 +482,8 @@ function phaseBlock(phase, segment) {
     phaseSteps(phase.status || '', segment));
   block.append(detailsBlock(phase.title + ':evidence', 'Evidence', evidenceContent(phase)));
   const notes = el('dl', 'notes',
-    el('dt', '', 'Review rounds'), el('dd', '', phase.review_rounds ?? 'Not recorded'),
-    el('dt', '', 'Unresolved'), el('dd', '', phase.unresolved ?? 'Not recorded'));
+    el('dt', '', 'Review rounds'), el('dd', '', markdownDoc(phase.review_rounds ?? 'Not recorded')),
+    el('dt', '', 'Unresolved'), el('dd', '', markdownDoc(phase.unresolved ?? 'Not recorded')));
   block.append(detailsBlock(phase.title + ':notes', 'Review notes', notes));
   return block;
 }
@@ -380,7 +505,7 @@ function phaseSteps(statusLine, segment) {
 
 function evidenceContent(phase) {
   if (phase.evidence_empty) return el('p', 'field-empty', 'Empty: no cited proof yet.');
-  return el('pre', '', phase.evidence);
+  return markdownDoc(phase.evidence);
 }
 
 function detailsBlock(key, label, content) {
@@ -389,11 +514,165 @@ function detailsBlock(key, label, content) {
   return details;
 }
 
-function copyButton(text) {
-  const button = el('button', 'copy', 'Copy');
+const HEADING = /^(#{1,4})\s+(.*)$/;
+const FENCE = /^\s*```/;
+const LIST_ITEM = /^(\s*)([-*]|\d+\.)\s+(.*)$/;
+const QUOTE = /^\s*>\s?(.*)$/;
+const TABLE_SEPARATOR = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/;
+const HTML_COMMENT = /<!--[\s\S]*?-->/g;
+const INLINE = /`([^`]+)`|\*\*(\S(?:.*?\S)?)\*\*|(?<!\w)\*([^*\s](?:[^*]*[^*\s])?)\*(?!\w)|(?<!\w)_([^_\s](?:[^_]*[^_\s])?)_(?!\w)/g;
+const NESTED_INDENT = 2;
+
+function markdownDoc(text) {
+  return el('div', 'doc', renderMarkdown(text));
+}
+
+function renderMarkdown(text) {
+  const lines = text.replace(HTML_COMMENT, '').split(/\r?\n/);
+  const fragment = document.createDocumentFragment();
+  let index = 0;
+  while (index < lines.length) {
+    const block = readBlock(lines, index);
+    if (block.node) fragment.append(block.node);
+    index = block.next;
+  }
+  return fragment;
+}
+
+function readBlock(lines, start) {
+  const line = lines[start];
+  if (line.trim() === '') return { node: null, next: start + 1 };
+  if (FENCE.test(line)) return readFence(lines, start);
+  const heading = line.match(HEADING);
+  if (heading) return { node: el('h' + heading[1].length, '', ...inline(heading[2])), next: start + 1 };
+  if (isTableStart(lines, start)) return readTable(lines, start);
+  if (QUOTE.test(line)) return readQuote(lines, start);
+  if (LIST_ITEM.test(line)) return readList(lines, start);
+  return readParagraph(lines, start);
+}
+
+function startsBlock(lines, index) {
+  const line = lines[index];
+  return line.trim() === '' || FENCE.test(line) || HEADING.test(line) || QUOTE.test(line)
+    || LIST_ITEM.test(line) || isTableStart(lines, index);
+}
+
+function readParagraph(lines, start) {
+  let end = start + 1;
+  while (end < lines.length && !startsBlock(lines, end)) end += 1;
+  const text = lines.slice(start, end).map((line) => line.trim()).join(' ');
+  return { node: el('p', '', ...inline(text)), next: end };
+}
+
+function readFence(lines, start) {
+  let end = start + 1;
+  while (end < lines.length && !FENCE.test(lines[end])) end += 1;
+  const code = lines.slice(start + 1, end).join('\n');
+  return { node: el('pre', '', el('code', '', code)), next: end + 1 };
+}
+
+function readQuote(lines, start) {
+  let end = start;
+  while (end < lines.length && QUOTE.test(lines[end])) end += 1;
+  const text = lines.slice(start, end).map((line) => line.match(QUOTE)[1].trim()).join(' ');
+  return { node: el('blockquote', '', ...inline(text)), next: end };
+}
+
+function isTableStart(lines, index) {
+  return lines[index].includes('|') && index + 1 < lines.length && TABLE_SEPARATOR.test(lines[index + 1]);
+}
+
+function readTable(lines, start) {
+  let end = start + 2;
+  while (end < lines.length && lines[end].includes('|') && lines[end].trim() !== '') end += 1;
+  const head = el('thead', '', tableRow('th', tableCells(lines[start])));
+  const bodyRows = lines.slice(start + 2, end).map((line) => tableRow('td', tableCells(line)));
+  const table = el('table', '', head, el('tbody', '', ...bodyRows));
+  return { node: el('div', 'table-wrap', table), next: end };
+}
+
+function tableCells(line) {
+  const inner = line.trim().replace(/^\|/, '').replace(/\|$/, '');
+  return inner.split('|').map((cell) => cell.trim());
+}
+
+function tableRow(cellTag, cells) {
+  return el('tr', '', ...cells.map((cell) => el(cellTag, '', ...inline(cell))));
+}
+
+function readList(lines, start) {
+  const items = [];
+  let end = start;
+  while (end < lines.length) {
+    const item = lines[end].match(LIST_ITEM);
+    const isContinuation = !item && items.length > 0 && /^\s+\S/.test(lines[end]);
+    if (!item && !isContinuation) break;
+    if (item && startsOtherList(items, item)) break;
+    if (item) {
+      items.push({ indent: item[1].length, isOrdered: /\d/.test(item[2]), number: parseInt(item[2], 10), text: item[3] });
+    } else {
+      items[items.length - 1].text += ' ' + lines[end].trim();
+    }
+    end += 1;
+  }
+  return { node: buildList(items), next: end };
+}
+
+function startsOtherList(items, item) {
+  const isOrdered = /\d/.test(item[2]);
+  return items.length > 0 && item[1].length <= items[0].indent && isOrdered !== items[0].isOrdered;
+}
+
+function buildList(items) {
+  const rootList = listElement(items[0]);
+  const openLists = [{ indent: items[0].indent, list: rootList }];
+  for (const item of items) {
+    listFor(openLists, item).append(el('li', '', ...inline(item.text)));
+  }
+  return rootList;
+}
+
+function listFor(openLists, item) {
+  while (openLists.length > 1 && item.indent < openLists[openLists.length - 1].indent) openLists.pop();
+  const innermost = openLists[openLists.length - 1];
+  if (item.indent < innermost.indent + NESTED_INDENT) return innermost.list;
+  const childList = listElement(item);
+  (innermost.list.lastElementChild || innermost.list).append(childList);
+  openLists.push({ indent: item.indent, list: childList });
+  return childList;
+}
+
+function listElement(item) {
+  if (!item.isOrdered) return el('ul', '');
+  const list = el('ol', '');
+  list.start = item.number;
+  return list;
+}
+
+function inline(text) {
+  const nodes = [];
+  let consumed = 0;
+  for (const match of text.matchAll(INLINE)) {
+    nodes.push(text.slice(consumed, match.index), inlineNode(match));
+    consumed = match.index + match[0].length;
+  }
+  nodes.push(text.slice(consumed));
+  return nodes;
+}
+
+function inlineNode(match) {
+  const [, code, bold, starItalic, underscoreItalic] = match;
+  if (code !== undefined) return el('code', '', code);
+  if (bold !== undefined) return el('strong', '', ...inline(bold));
+  return el('em', '', starItalic ?? underscoreItalic);
+}
+
+function copyButton(text, label = 'Copy') {
+  const button = el('button', 'copy', label);
   button.addEventListener('click', async () => {
     await navigator.clipboard.writeText(text);
     button.textContent = 'Copied';
+    setTimeout(() => { button.textContent = label; }, COPIED_MS);
   });
   return button;
 }

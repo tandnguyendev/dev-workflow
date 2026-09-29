@@ -96,7 +96,7 @@ def test_collect_reads_features_and_phases_through_the_workflow_parsers(git_repo
     assert alpha["track"] == ["done", "waiting"]
     assert (beta["current"], beta["waiting"], beta["coded"]) == ("Phase 1 — only", False, True)
 
-    write_feature(git_repo, "gamma", phase("Phase 1 — all", approved=True, evidence="pytest -> 3 passed"))
+    write_feature(git_repo, "gamma", phase("Phase 1 — all", approved=True, evidence="\n  - a\n  - b"))
     write_feature(git_repo, "delta", phase("Phase 1 — draft", coded=False))
     write_feature(git_repo, "epsilon", phase("Phase 1 — <title>", coded=False))
     states = {f["slug"]: f["state"] for f in dashboard.list_features(str(git_repo), "alpha")}
@@ -107,6 +107,7 @@ def test_collect_reads_features_and_phases_through_the_workflow_parsers(git_repo
         "epsilon": "No phases yet",
         "gamma": "Done",
     }
+    assert dashboard.collect(str(git_repo), "gamma")["phases"][0]["evidence"] == "- a\n- b"
 
 
 def test_overview_shows_each_live_project_once_waiting_first(tmp_path):
@@ -125,6 +126,7 @@ def test_overview_shows_each_live_project_once_waiting_first(tmp_path):
     assert [project["root"] for project in board] == [os.path.realpath(busy), os.path.realpath(quiet)]
     assert [feature["slug"] for feature in board[0]["features"]] == ["alpha", "aaa", "beta"]
     assert board[0]["name"] == "busy"
+    assert board[0]["resume"] == "cd %s && claude --continue" % shlex.quote(os.path.realpath(busy))
 
 
 def test_a_failing_section_does_not_take_the_others_down(tmp_path, monkeypatch):

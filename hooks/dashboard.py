@@ -12,6 +12,7 @@ import os
 import select
 import shlex
 import sys
+import textwrap
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlsplit
 
@@ -54,7 +55,8 @@ def project_board(root):
         waiting = [feature for feature in features if feature["waiting"]]
         others = [feature for feature in features if not feature["waiting"]]
         features = waiting + others
-    return {"root": root, "name": os.path.basename(root), "features": features}
+    return {"root": root, "name": os.path.basename(root), "features": features,
+            "resume": "cd %s && claude --continue" % shlex.quote(root)}
 
 
 def has_waiting(features):
@@ -200,7 +202,7 @@ def phase_card(title, body, approved):
 
 def field(body, name):
     text = _workflow.field_text(body, name)
-    return text.strip() if text is not None else None
+    return textwrap.dedent(text).strip() if text is not None else None
 
 
 def guard_warnings(log, plan, root):
