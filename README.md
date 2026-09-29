@@ -50,6 +50,7 @@ Working docs scaffold automatically under `.dev-workflow/features/<slug>/`; mult
 | `/dev-workflow:feature` | Drive the whole feature workflow (orchestrator). `--bug` swaps the front end for reproduce → root cause → regression |
 | `/dev-workflow:status` | Readout of the active feature / phase / gate |
 | `/dev-workflow:config` | Effective settings, where each came from, and which config lines are silently doing nothing |
+| `/dev-workflow:dashboard` | Read-only local web board (127.0.0.1) of all projects: each feature's progress, the ones waiting for your approval first; phases, evidence, plan, spec, checkpoints and config on click; refreshes itself |
 | `/dev-workflow:checkpoints` | List auto-snapshots |
 | `/dev-workflow:rollback` | Restore to a checkpoint (safe, reversible) |
 

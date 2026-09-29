@@ -11,8 +11,9 @@ import json
 import os
 import re
 import sys
+import tempfile
 
-from _workflow import docs_dir, iter_phases, read
+from _workflow import STATE_DIR, docs_dir, iter_phases, read
 
 # Ensure UTF-8 output regardless of the host locale (Windows pipes default to
 # cp1252, which mangles em dashes and other non-ASCII in feature names).
@@ -53,8 +54,53 @@ def title_from(text, prefix):
     return None
 
 
+def registry_path():
+    return os.path.expanduser("~/.claude/dev-workflow/projects.json")
+
+
+def registered():
+    """Project roots that have started a session with the plugin; [] if unreadable."""
+    raw = read(registry_path())
+    if not raw:
+        return []
+    try:
+        roots = json.loads(raw)
+    except ValueError:
+        return []
+    if not isinstance(roots, list):
+        return []
+    return [root for root in roots if isinstance(root, str)]
+
+
+def register(root):
+    # Silent on any failure: this hook's stdout is Claude's context, and HOME may be unwritable.
+    try:
+        if not os.path.isdir(os.path.join(root, STATE_DIR)):
+            return
+        project = os.path.realpath(root)
+        known = registered()
+        if project not in known:
+            write_registry(known + [project])
+    except Exception:
+        pass
+
+
+def write_registry(roots):
+    path = registry_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=os.path.dirname(path), prefix=".projects-")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(roots, fh, indent=2)
+        os.replace(tmp_path, path)
+    except Exception:
+        os.remove(tmp_path)
+        raise
+
+
 def main():
     root, source = read_input()
+    register(root)
     ddir, slug = docs_dir(root)
     log = read(os.path.join(ddir, "phase-log.md"))
     if not log:

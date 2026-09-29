@@ -63,6 +63,14 @@ def phase_log(*sections, feature="Test feature"):
     return f"# Phase log: {feature}\n\n" + "".join(sections)
 
 
+@pytest.fixture(autouse=True)
+def isolated_home(tmp_path_factory, monkeypatch):
+    """A throwaway HOME, so hooks never write the real ~/.claude project registry."""
+    home = tmp_path_factory.mktemp("home")
+    monkeypatch.setenv("HOME", str(home))
+    return home
+
+
 @pytest.fixture
 def git_repo(tmp_path):
     """A tmp git repo with one commit (a.txt='one'), identity set locally so

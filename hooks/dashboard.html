@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workflow board</title>
+<style>
+  :root {
+    --bg: #eef1f4; --surface: #ffffff; --ink: #1b2430; --muted: #6b7686; --line: #d5dbe3;
+    --done: #2e9e6b; --wait: #e8a317; --todo: #cfd6df; --focus: #2f5fd0;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151a21; --surface: #1d242d; --ink: #e6eaf0; --muted: #8f9aab; --line: #2c3541;
+      --done: #4cc28d; --wait: #f0b53a; --todo: #36404d; --focus: #7a9bff;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; font-variant-numeric: tabular-nums; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .page { max-width: 980px; margin: 0 auto; padding: 24px 20px 48px; }
+  .top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 22px; font-weight: 650; margin: 0; }
+  h2 { font-size: 15px; font-weight: 600; margin: 28px 0 10px; }
+  .count { color: var(--muted); font-weight: 400; margin-left: 4px; }
+  .muted { color: var(--muted); }
+  .error { color: var(--wait); }
+  .live { color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--done); }
+  .dot.offline { background: var(--todo); }
+
+  .track { display: flex; gap: 4px; }
+  .segment { width: 26px; height: 8px; border-radius: 4px; background: var(--todo); flex: none; }
+  .segment.done { background: var(--done); }
+  .segment.waiting { background: var(--wait); }
+  .segment.current { background: linear-gradient(90deg, var(--done) 50%, var(--todo) 50%); }
+
+  .waiting-card { display: flex; align-items: center; justify-content: space-between; gap: 16px;
+                  background: var(--surface); border-left: 4px solid var(--wait); border-radius: 8px;
+                  padding: 14px 16px; margin-bottom: 10px; cursor: pointer; }
+  .waiting-card strong { font-weight: 600; }
+
+  .list { background: var(--surface); border-radius: 10px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 190px 1fr 130px 150px; gap: 12px; align-items: center;
+         padding: 11px 16px; border-top: 1px solid var(--line); cursor: pointer; }
+  .row:first-child { border-top: 0; }
+  .row.static { cursor: default; }
+  .row:hover:not(.static) { background: var(--bg); }
+  .row .project { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .state { text-align: right; }
+  .state.needs-approval { color: var(--wait); font-weight: 600; }
+
+  .scrim { position: fixed; inset: 0; background: rgb(10 14 20 / .35); }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(560px, 100%); background: var(--surface);
+            display: flex; flex-direction: column; box-shadow: -4px 0 24px rgb(10 14 20 / .2);
+            animation: slide-in 0.2s ease-out; }
+  @keyframes slide-in { from { transform: translateX(100%); } to { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .drawer { animation: none; } }
+  .drawer-head { display: flex; justify-content: space-between; gap: 12px; padding: 18px 20px 8px; }
+  .drawer-head h2 { margin: 0; font-size: 18px; }
+  .drawer-head p { margin: 2px 0 0; }
+  .close { background: none; border: 0; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer;
+           padding: 2px 6px; border-radius: 6px; }
+  .tabs { display: flex; gap: 18px; padding: 0 20px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .tab { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted);
+         font: inherit; padding: 8px 0; cursor: pointer; }
+  .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+  .drawer-body { padding: 16px 20px 32px; overflow-y: auto; flex: 1; }
+
+  .warning { border-left: 4px solid var(--wait); background: var(--bg); padding: 8px 12px;
+             border-radius: 6px; margin-bottom: 10px; }
+  .phase { border-top: 1px solid var(--line); padding: 12px 0; }
+  .phase:first-of-type { border-top: 0; }
+  .phase-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 600; }
+  .steps { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0; }
+  .step { color: var(--muted); }
+  .step.done { color: var(--done); }
+  .step.waiting { color: var(--wait); font-weight: 600; }
+  details { margin-top: 4px; }
+  summary { cursor: pointer; color: var(--muted); }
+  .field-empty { color: var(--wait); font-weight: 600; }
+  .notes dt { color: var(--muted); }
+  .notes dd { margin: 0 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  pre { background: var(--bg); border-radius: 6px; padding: 10px 12px; overflow: auto; font-size: 13px;
+        white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 6px 8px 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 400; }
+  code.command { font-family: ui-monospace, monospace; font-size: 12px; overflow-wrap: anywhere; }
+  .copy { margin-left: 6px; font: inherit; font-size: 13px; padding: 0 8px; cursor: pointer; color: var(--ink);
+          border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+
+  @media (max-width: 720px) {
+    .row { grid-template-columns: 1fr; gap: 4px; }
+    .row .state { text-align: left; }
+    .waiting-card { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="top">
+    <h1>Workflow board</h1>
+    <span class="live"><span class="dot" id="dot"></span><span id="live">Connecting…</span></span>
+  </header>
+  <section id="waiting-section" hidden>
+    <h2>Waiting for you<span class="count" id="waiting-count"></span></h2>
+    <div id="waiting"></div>
+  </section>
+  <section>
+    <h2>All projects<span class="count" id="project-count"></span></h2>
+    <div class="list" id="projects"></div>
+  </section>
+</main>
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+  <div class="drawer-head">
+    <div><h2 id="drawer-title"></h2><p class="muted" id="drawer-subtitle"></p></div>
+    <button class="close" id="close" aria-label="Close">×</button>
+  </div>
+  <div class="tabs" id="tabs" role="tablist"></div>
+  <div class="drawer-body" id="drawer-body"></div>
+</aside>
+<script>
+const POLL_MS = 2000;
+const TABS = ['Phases', 'Plan', 'Spec', 'Checkpoints', 'Config'];
+const STEPS = [
+  { label: 'Coded', ticks: ['coded'] },
+  { label: 'Reviewed', ticks: ['code-reviewed', 'full code review'] },
+  { label: 'Scanned', ticks: ['security-scanned', 'security-audit'] },
+  { label: 'Approved', ticks: ['USER APPROVED'] },
+];
+
+let overviewText = null;
+let overviewProjects = [];
+let lastUpdateAt = null;
+let isOffline = false;
+let openFeature = null;
+let drawerKey = null;
+let selectedTab = 'Phases';
+let opener = null;
+
+function el(tag, className, ...children) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  for (const child of children) {
+    node.append(child instanceof Node ? child : String(child));
+  }
+  return node;
+}
+
+function isFailed(section) {
+  return section !== null && typeof section === 'object' && !Array.isArray(section) && 'error' in section;
+}
+
+function unavailable(section) {
+  return el('p', 'error', 'Unavailable: ' + section.error);
+}
+
+function phaseTrack(segments) {
+  return el('div', 'track', ...segments.map((segment) => el('span', 'segment ' + segment)));
+}
+
+function makeActivatable(node, onActivate) {
+  node.tabIndex = 0;
+  node.setAttribute('role', 'button');
+  node.addEventListener('click', () => onActivate(node));
+  node.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onActivate(node);
+    }
+  });
+  return node;
+}
+
+async function fetchText(url) {
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) throw new Error('HTTP ' + response.status);
+  return response.text();
+}
+
+async function pollOverview() {
+  try {
+    const text = await fetchText('/api/overview');
+    lastUpdateAt = Date.now();
+    isOffline = false;
+    if (text !== overviewText) {
+      overviewText = text;
+      overviewProjects = JSON.parse(text).projects;
+      renderOverview();
+    }
+  } catch (error) {
+    isOffline = true;
+  }
+  showAge();
+}
+
+function showAge() {
+  const live = document.getElementById('live');
+  document.getElementById('dot').classList.toggle('offline', isOffline);
+  if (isOffline) {
+    live.textContent = 'Offline, the server may have stopped';
+    return;
+  }
+  if (lastUpdateAt === null) return;
+  const seconds = Math.round((Date.now() - lastUpdateAt) / 1000);
+  const noun = overviewProjects.length === 1 ? ' project' : ' projects';
+  live.textContent = overviewProjects.length + noun + ', updated ' + seconds + 's ago';
+}
+
+function listedFeatures(project) {
+  return isFailed(project.features) ? [] : project.features;
+}
+
+function renderOverview() {
+  const waitingCards = [];
+  for (const project of overviewProjects) {
+    for (const feature of listedFeatures(project).filter((f) => f.waiting)) {
+      waitingCards.push(waitingCard(project, feature));
+    }
+  }
+  document.getElementById('waiting-section').hidden = waitingCards.length === 0;
+  document.getElementById('waiting-count').textContent = waitingCards.length;
+  document.getElementById('waiting').replaceChildren(...waitingCards);
+  document.getElementById('project-count').textContent = overviewProjects.length;
+  document.getElementById('projects').replaceChildren(...overviewProjects.flatMap(projectRows));
+}
+
+function waitingCard(project, feature) {
+  const text = el('div', '',
+    el('div', '', el('strong', '', feature.title), el('span', 'muted', ' in ' + project.name)),
+    el('div', '', feature.current + ' is reviewed. Approve it or ask for changes.'));
+  const card = el('div', 'waiting-card', text, phaseTrack(feature.track));
+  return makeActivatable(card, (node) => openDrawer(project, feature, node));
+}
+
+function projectName(project) {
+  const name = el('span', 'project', project.name);
+  name.title = project.root;
+  return name;
+}
+
+function projectRows(project) {
+  if (isFailed(project.features)) {
+    return [el('div', 'row static', projectName(project), unavailable(project.features), el('span', ''), el('span', ''))];
+  }
+  if (project.features.length === 0) {
+    return [el('div', 'row static', projectName(project), el('span', 'muted', 'No features yet'), el('span', ''), el('span', ''))];
+  }
+  return project.features.map((feature) => {
+    const stateClass = feature.waiting ? 'state needs-approval' : 'state';
+    const row = el('div', 'row', projectName(project), el('span', '', feature.title),
+      phaseTrack(feature.track), el('span', stateClass, feature.state));
+    return makeActivatable(row, (node) => openDrawer(project, feature, node));
+  });
+}
+
+function openDrawer(project, feature, node) {
+  opener = node;
+  openFeature = { root: project.root, name: project.name, slug: feature.slug };
+  drawerKey = null;
+  selectedTab = 'Phases';
+  document.getElementById('drawer-title').textContent = feature.title;
+  document.getElementById('drawer-subtitle').textContent = project.name;
+  document.getElementById('drawer-body').replaceChildren(el('p', 'muted', 'Loading…'));
+  document.getElementById('scrim').hidden = false;
+  document.getElementById('drawer').hidden = false;
+  document.getElementById('close').focus();
+  pollDetail();
+}
+
+function closeDrawer() {
+  openFeature = null;
+  document.getElementById('scrim').hidden = true;
+  document.getElementById('drawer').hidden = true;
+  if (opener && opener.isConnected) opener.focus();
+}
+
+function currentTrack() {
+  const project = overviewProjects.find((p) => p.root === openFeature.root);
+  const feature = project && listedFeatures(project).find((f) => f.slug === openFeature.slug);
+  return feature ? feature.track : [];
+}
+
+async function pollDetail() {
+  if (!openFeature) return;
+  const requested = openFeature;
+  const query = '?project=' + encodeURIComponent(requested.root) + '&feature=' + encodeURIComponent(requested.slug);
+  try {
+    const text = await fetchText('/api/state' + query);
+    if (openFeature !== requested) return;
+    const track = currentTrack();
+    const key = text + JSON.stringify(track);
+    if (key !== drawerKey) {
+      drawerKey = key;
+      renderDrawer(JSON.parse(text), track);
+    }
+  } catch (error) {
+    if (openFeature !== requested) return;
+    drawerKey = null;
+    document.getElementById('drawer-body').replaceChildren(unavailable({ error: error.message }));
+  }
+}
+
+function renderDrawer(state, track) {
+  const gate = isFailed(state.gate) ? 'unavailable' : state.gate;
+  document.getElementById('drawer-title').textContent = state.title;
+  document.getElementById('drawer-subtitle').textContent = openFeature.name + ', gate ' + gate;
+  renderTabs(state, track);
+}
+
+function renderTabs(state, track) {
+  const openDetails = new Set([...document.querySelectorAll('#drawer-body details[open]')].map((d) => d.dataset.key));
+  const tabs = TABS.map((name) => {
+    const tab = el('button', 'tab', name);
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-selected', String(name === selectedTab));
+    tab.addEventListener('click', () => {
+      selectedTab = name;
+      renderTabs(state, track);
+      document.querySelector('#tabs [aria-selected="true"]').focus();
+    });
+    return tab;
+  });
+  document.getElementById('tabs').replaceChildren(...tabs);
+  const body = document.getElementById('drawer-body');
+  body.replaceChildren(...tabContent(state, track));
+  for (const details of body.querySelectorAll('details')) {
+    details.open = openDetails.has(details.dataset.key);
+  }
+}
+
+function tabContent(state, track) {
+  if (selectedTab === 'Phases') return phasesTab(state, track);
+  if (selectedTab === 'Plan') return [el('pre', '', state.plan || 'No plan.md yet.')];
+  if (selectedTab === 'Spec') return [el('pre', '', state.spec || 'No spec.md yet.')];
+  if (selectedTab === 'Checkpoints') return checkpointsTab(state);
+  return [isFailed(state.config) ? unavailable(state.config) : el('pre', '', state.config)];
+}
+
+function phasesTab(state, track) {
+  const warnings = isFailed(state.warnings) ? [unavailable(state.warnings)]
+    : state.warnings.map((warning) => el('div', 'warning', warning));
+  if (isFailed(state.phases)) return [...warnings, unavailable(state.phases)];
+  if (state.phases.length === 0) return [...warnings, el('p', 'muted', 'No phases yet.')];
+  return [...warnings, ...state.phases.map((phase, index) => phaseBlock(phase, track[index] || 'todo'))];
+}
+
+function phaseBlock(phase, segment) {
+  const block = el('div', 'phase',
+    el('div', 'phase-title', el('span', '', phase.title), phaseTrack([segment])),
+    phaseSteps(phase.status || '', segment));
+  block.append(detailsBlock(phase.title + ':evidence', 'Evidence', evidenceContent(phase)));
+  const notes = el('dl', 'notes',
+    el('dt', '', 'Review rounds'), el('dd', '', phase.review_rounds ?? 'Not recorded'),
+    el('dt', '', 'Unresolved'), el('dd', '', phase.unresolved ?? 'Not recorded'));
+  block.append(detailsBlock(phase.title + ':notes', 'Review notes', notes));
+  return block;
+}
+
+function phaseSteps(statusLine, segment) {
+  const steps = el('div', 'steps');
+  for (const step of STEPS) {
+    const present = step.ticks.filter((tick) => statusLine.includes(tick));
+    if (present.length === 0) continue;
+    const isTicked = present.some((tick) => statusLine.includes('[x] ' + tick) || statusLine.includes('[X] ' + tick));
+    if (step.label === 'Approved' && !isTicked && segment === 'waiting') {
+      steps.append(el('span', 'step waiting', 'Waiting for your approval'));
+      continue;
+    }
+    steps.append(el('span', isTicked ? 'step done' : 'step', (isTicked ? '✓ ' : '') + step.label));
+  }
+  return steps;
+}
+
+function evidenceContent(phase) {
+  if (phase.evidence_empty) return el('p', 'field-empty', 'Empty: no cited proof yet.');
+  return el('pre', '', phase.evidence);
+}
+
+function detailsBlock(key, label, content) {
+  const details = el('details', '', el('summary', '', label), content);
+  details.dataset.key = key;
+  return details;
+}
+
+function copyButton(text) {
+  const button = el('button', 'copy', 'Copy');
+  button.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(text);
+    button.textContent = 'Copied';
+  });
+  return button;
+}
+
+function command(text) {
+  return el('span', '', el('code', 'command', text), copyButton(text));
+}
+
+function rollbackCell(rollbackCommand) {
+  return rollbackCommand ? command(rollbackCommand) : '';
+}
+
+function checkpointsTab(state) {
+  const content = [];
+  if (isFailed(state.checkpoints)) {
+    content.push(unavailable(state.checkpoints));
+  } else if (state.checkpoints.length === 0) {
+    content.push(el('p', 'muted', 'No checkpoints, or not a git repository.'));
+  } else {
+    const header = el('tr', '', el('th', '', 'Time'), el('th', '', 'Tool'), el('th', '', 'Roll back (run in your shell)'));
+    const rows = state.checkpoints.map((row) => el('tr', '',
+      el('td', '', row.timestamp ?? '?'), el('td', '', row.tool ?? '?'),
+      el('td', '', rollbackCell(state.actions.rollback[row.ref]))));
+    content.push(el('table', '', header, ...rows));
+  }
+  content.push(el('p', '', el('span', 'muted', 'Unlock the gate: '), command(state.actions.unlock_gate)));
+  return content;
+}
+
+document.getElementById('close').addEventListener('click', closeDrawer);
+document.getElementById('scrim').addEventListener('click', closeDrawer);
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && openFeature) closeDrawer();
+});
+
+pollOverview();
+setInterval(pollOverview, POLL_MS);
+setInterval(pollDetail, POLL_MS);
+setInterval(showAge, 1000);
+</script>
+</body>
+</html>
