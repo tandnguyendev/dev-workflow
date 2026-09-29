@@ -5,6 +5,19 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-09-29
+
+### Added
+- **`/dev-workflow:dashboard` — a local, read-only board of every project.** One page on
+  `127.0.0.1` shows every project using the plugin: features waiting for your approval first,
+  then one row per feature with a phase track and a short status. Spec, plan, evidence,
+  checkpoints (with copyable `!` rollback commands) and config open in a side panel on click.
+  Refreshes itself every 2s. Stdlib only, GET only, Host-checked, no write route; `--detach`
+  returns at once and the server stops after 30 min idle.
+- **Project registry.** The SessionStart hook records each project that has `.dev-workflow/` in
+  `~/.claude/dev-workflow/projects.json` — the plugin's first per-user file. Silent on any error.
+  A project shows up on the board after its first session on this version.
+
 ## [0.16.0] - 2026-09-29
 
 ### Added
