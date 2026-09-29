@@ -17,8 +17,18 @@ code. Stated up front so an over-built plan is visible before it is approved.
 MACHINE-CHECKED: the plan guard refuses to end a turn while this is still the
 placeholder.>
 
-## Files expected to change
-- `path/to/file` — <what changes>
+## Structure
+> The SHAPE of the change, decided here — not left to the coder to improvise.
+> Reviewed by the plan-reviewer and the user before any code is written.
+- Pattern: <the existing feature this one is shaped like, by path — e.g. "same as
+  `src/orders/` (controller → service → repository)". The coder mirrors it. If
+  nothing in the project fits, say so and name the pattern you chose and why.>
+- Files:
+  - `path/to/file` — NEW / EDIT — <its one responsibility>
+- Flow: <the main path in 3–6 steps, entry point to output, naming the file each
+  step lives in — e.g. `route (api/orders.ts)` → `validate (orders/schema.ts)` →
+  `OrderService.create (orders/service.ts)` → `repo.insert`>
+- Deviations: <where this change departs from the pattern above and why, or "none">
 
 ## Phases
 > Order by dependency, then risk (uncertain phases early). One reviewable diff each.

@@ -124,6 +124,10 @@ brief or your reasoning. Code that is correct but has to be decoded is a defect.
 - **Use the helpers and patterns the codebase already has** for the same job, so
   the reader recognises them — but don't copy an unreadable shape into new code
   just because a neighbour has it.
+- **Follow the agreed `## Structure`.** When the brief names an exemplar, open it
+  first and mirror its file layout, layering and naming; put each file where the
+  plan put it, with the one responsibility the plan gave it. If the code will not
+  fit that shape, stop and report why instead of inventing a different one.
 Self-check before you return: could a teammate explain each function you wrote
 after one read, without the brief? If not, rename or restructure until they could.
 

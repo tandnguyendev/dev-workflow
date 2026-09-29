@@ -50,6 +50,11 @@ Focus on:
   - **NIT** (judgement): control flow nested deeper than two levels; a dense
     chain that would read better with named intermediates; an entry function
     that doesn't read top to bottom as what the feature does.
+- **Structure drift** — when the brief quotes `plan.md`'s `## Structure`: a file
+  placed or named differently from the plan, a file doing a second job, or a layout
+  that departs from the named exemplar without a `- Deviations:` entry. BLOCKING
+  when a new file lands in the wrong place or merges responsibilities the exemplar
+  keeps apart; NIT for naming.
 - Duplicated code, including a local reimplementation of something the project
   already provides. If the brief quotes `project-map.md` building blocks or
   extension points, check the change actually used them.

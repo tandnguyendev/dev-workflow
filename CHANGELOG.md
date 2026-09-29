@@ -5,6 +5,22 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **`plan.md` decides the shape of the code, not just the files.** `## Files
+  expected to change` becomes `## Structure`: the existing feature the new one is
+  shaped like (by path), each file's one responsibility, the main flow, and any
+  deviations. The coder had only a file list, so it invented a layout per feature
+  and the codebase drifted away from any pattern. The coder now mirrors the named
+  exemplar, the plan-reviewer blocks a plan without one, and the code-reviewer
+  flags structure drift. The solution architect names the exemplar its option
+  would follow.
+- **Throwaway UI prototype, only when the screen is the open question.** A new
+  page whose layout is not pinned down gets a static HTML mock in the feature dir
+  before the plan checkpoint, deleted once the plan is approved. Nothing else gets
+  a prototype.
+
 ## [0.15.0] - 2026-09-25
 
 ### Changed

@@ -355,6 +355,22 @@ Reads, not a subagent.
      per criterion" in Stage 4).
    - **Each phase has a rollback point.** Note where the checkpoint sits so a bad
      phase can be reverted cleanly (ties into the checkpoint/rollback machinery).
+   - **Decide the shape before the phases — fill `## Structure`.** Where each
+     new file goes, the one responsibility each file has, the main flow from entry
+     point to output, and — the part that matters most — the EXISTING feature it is
+     shaped like, by path. Pick that exemplar from `project-map.md` "Existing
+     features" and read it: the new code mirrors its layout, layering and naming.
+     A coder given only "files to change" invents a layout per feature, and after
+     a few features the codebase follows no pattern at all. If nothing in the
+     project fits, name the pattern you chose and why; a departure from the
+     exemplar goes on the `- Deviations:` line, where the user sees it.
+   - **Prototype only when what the user will SEE is the uncertain part.** For a
+     new screen or page whose layout nobody has pinned down, build a throwaway
+     static mock (one HTML file, fake data, in the feature dir — never in the
+     source tree) and show it before the plan checkpoint. It is a question to the
+     user, not a first draft: it is deleted once the plan is approved, and no
+     phase builds on it. Anything else — an endpoint, a job, a refactor — gets no
+     prototype; `## Structure` on paper is enough.
    - **Reuse before rebuild.** Name, per phase, the existing building block or
      extension point from `project-map.md` it hooks into. If the plan adds
      something the project already has in another form, either use the existing
@@ -406,13 +422,16 @@ For each phase in `plan.md`, in order:
    those spots directly instead of Grep-walking the tree to locate them. Include
    the `project-map.md` lines that matter for THIS phase — the building block it
    should reuse, the extension point it hooks into, the gotcha in that module —
-   quoted inline, a few lines, not the file. A reused coder already knows most of
+   quoted inline, a few lines, not the file. Quote `plan.md`'s `## Structure`
+   too (its pattern + exemplar path, and this phase's files and flow steps): the
+   coder mirrors the exemplar, and the code-reviewer gets the same block. A reused coder already knows most of
    this: send only what's NEW for this phase, and don't have it re-read the whole
    spec/plan.
 2. When it returns, run the reviews IN PARALLEL (freshly spawned) — hand each the
    changed files/diff and exact paths directly, never make them re-scan to find the
    change, plus the phase's `Done when:` (the code-reviewer needs it to judge what
-   is over-built). If the coder returned `Suggested, not built:` items, carry them
+   is over-built) and `plan.md`'s `## Structure` (to judge whether the code
+   follows the agreed shape). If the coder returned `Suggested, not built:` items, carry them
    to the user at this phase's checkpoint — never build them on your own call.
    Before the reviews, check the diff for files the phase should not leave behind:
    probe/smoke/e2e scripts, backups, `.diff` dumps, handoff notes — in `src/`,

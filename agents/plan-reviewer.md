@@ -64,6 +64,13 @@ Attack the plan on these axes:
 - **Evidence & rollback**: does each phase name what would prove it done, and a
   safe rollback point? Flag phases that can't be checkpointed or reverted.
 - **Scope drift**: phases that exceed or contradict the chosen option in `spec.md`.
+- **Structure**: `## Structure` must name an exemplar — an existing feature by
+  path — and you must open it. Flag a file placed where the exemplar and
+  `project-map.md` would not put it; a file with two responsibilities (e.g. a
+  server with its whole UI in a string, a handler holding business logic the
+  exemplar keeps in a service); a flow that skips a layer the exemplar has, or
+  adds one it does not; a departure not listed under `- Deviations:`. A missing
+  or placeholder exemplar is BLOCKING — without it the coder improvises a layout.
 - **Rebuilding what exists**: work the project already has in another form. Check
   the plan against the existing-implementation survey in `spec.md` and the building
   blocks / extension points in `project-map.md` (verify against the code — the map

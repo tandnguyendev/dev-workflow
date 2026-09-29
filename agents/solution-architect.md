@@ -48,7 +48,8 @@ it as a suggestion for the user, outside the option itself.
 Return (your final message IS the returned data, not a greeting):
 - Angle: <your assigned angle>
 - Approach: 2–4 sentences describing the option concretely for this codebase.
-- Key components / files it would touch.
+- Key components / files it would touch, and the existing feature (by path) whose
+  layout it would mirror.
 - Size: files touched + rough lines of change, and what of that is NEW structure
   (new file/class/layer/dependency) versus edits to existing code. Be honest — the
   orchestrator puts this in the comparison table the user chooses from.
