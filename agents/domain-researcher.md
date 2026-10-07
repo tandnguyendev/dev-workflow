@@ -27,6 +27,15 @@ there is no map, find the relevant surfaces yourself (routes, commands, handlers
 jobs, modules) with targeted Grep/Glob — survey the area this feature touches, not
 the whole repo.
 
+**Read efficiently** — every tool call is a round-trip, so spend few:
+- Start from the paths the brief gives you; check `project-map.md` before
+  Glob-walking the repo, and Glob a narrow path, not `**/*`.
+- Put independent Reads and Greps in ONE turn, not one per turn.
+- Locate, then read: Grep (`files_with_matches`, or `-n` on a known file), then
+  Read just that range with `offset`/`limit` — not a whole long file to find one
+  function.
+- Never re-read a file already in your context.
+
 Rules:
 - READ and look things up ONLY. Do NOT modify or write code files.
 - Prefer authoritative sources; state clearly when a recommendation is contested.

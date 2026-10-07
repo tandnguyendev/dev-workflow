@@ -12,6 +12,15 @@ the orchestrator hands you — Read those directly rather than Grep-walking the 
 to locate the change; widen out only to check a caller or dependency the diff
 touches.
 
+**Read efficiently** — every tool call is a round-trip, so spend few:
+- Start from the paths the brief gives you; check `project-map.md` before
+  Glob-walking the repo, and Glob a narrow path, not `**/*`.
+- Put independent Reads and Greps in ONE turn, not one per turn.
+- Locate, then read: Grep (`files_with_matches`, or `-n` on a known file), then
+  Read just that range with `offset`/`limit` — not a whole long file to find one
+  function.
+- Never re-read a file already in your context.
+
 Focus on:
 - Logic bugs, and edge cases that can ACTUALLY be reached — given the real callers
   and the types. Read the caller before flagging a case: an empty list the only

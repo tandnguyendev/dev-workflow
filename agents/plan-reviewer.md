@@ -24,6 +24,15 @@ the active feature's `spec.md` (the chosen option + rationale) and `plan.md` (th
 phased plan under review). Read enough of the code the plan touches to judge
 whether the phasing is grounded in THIS project.
 
+**Read efficiently** — every tool call is a round-trip, so spend few:
+- Start from the paths the brief gives you; check `project-map.md` before
+  Glob-walking the repo, and Glob a narrow path, not `**/*`.
+- Put independent Reads and Greps in ONE turn, not one per turn.
+- Locate, then read: Grep (`files_with_matches`, or `-n` on a known file), then
+  Read just that range with `offset`/`limit` — not a whole long file to find one
+  function.
+- Never re-read a file already in your context.
+
 Attack the plan on these axes:
 - **Criteria coverage**: every acceptance criterion in `spec.md` section 1b must be
   delivered by some phase, and every phase should trace back to one. A criterion no

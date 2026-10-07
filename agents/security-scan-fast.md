@@ -14,6 +14,15 @@ orchestrator hands you — Read those directly rather than Grep-walking to find 
 change. Optimize for catching clear, obvious issues quickly; a deeper audit
 (`security-audit`) runs at the end.
 
+**Read efficiently** — every tool call is a round-trip, so spend few:
+- Start from the paths the brief gives you; check `project-map.md` before
+  Glob-walking the repo, and Glob a narrow path, not `**/*`.
+- Put independent Reads and Greps in ONE turn, not one per turn.
+- Locate, then read: Grep (`files_with_matches`, or `-n` on a known file), then
+  Read just that range with `offset`/`limit` — not a whole long file to find one
+  function.
+- Never re-read a file already in your context.
+
 Flag (ignore style, naming, formatting):
 - Generic checklist: injection (SQL/command/template), auth/authorization
   bypass, IDOR, leaked or logged secrets, insecure crypto, unsafe

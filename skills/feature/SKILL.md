@@ -429,7 +429,9 @@ For each phase in `plan.md`, in order:
    spec/plan.
 2. When it returns, run the reviews IN PARALLEL (freshly spawned) — hand each the
    changed files/diff and exact paths directly, never make them re-scan to find the
-   change, plus the phase's `Done when:` (the code-reviewer needs it to judge what
+   change. Reviewers have no Bash and cannot run `git diff`: paste the diff inline,
+   or for a long one, each changed file with the line ranges of its hunks. Add the
+   phase's `Done when:` (the code-reviewer needs it to judge what
    is over-built) and `plan.md`'s `## Structure` (to judge whether the code
    follows the agreed shape). If the coder returned `Suggested, not built:` items, carry them
    to the user at this phase's checkpoint — never build them on your own call.
@@ -584,7 +586,9 @@ Final review section that normally carries `- Project map updated:` and
 `- Lessons:`, write both lines on the LAST PHASE instead, and run Stage 6 at that
 phase's approval checkpoint. The plan guard requires them there.
 
-1. Run over all phases together:
+1. Run over all phases together. Brief both reviewers with the feature's
+   footprint so they don't re-discover it: every changed file grouped by phase,
+   with the line ranges of its hunks, and which phases skipped `security-scan-fast`.
    - `code-reviewer` on CROSS-PHASE issues ONLY — inconsistencies, phase
      interactions, integration seams. Do NOT re-review files from scratch (done
      per phase).

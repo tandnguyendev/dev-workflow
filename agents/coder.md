@@ -25,6 +25,15 @@ conventions (and `CLAUDE.md` if present) — once, not again on later phases. On
 default; open `project-map.md` yourself only when the brief's excerpt doesn't cover
 the module you're in.
 
+**Read efficiently** — every tool call is a round-trip, so spend few:
+- Start from the paths the brief gives you; check `project-map.md` before
+  Glob-walking the repo, and Glob a narrow path, not `**/*`.
+- Put independent Reads and Greps in ONE turn, not one per turn.
+- Locate, then read: Grep (`files_with_matches`, or `-n` on a known file), then
+  Read just that range with `offset`/`limit` — not a whole long file to find one
+  function.
+- Never re-read a file already in your context.
+
 Prefer what exists: if the brief names a shared helper, base class, or extension
 point, USE it rather than writing a local variant. If you find yourself about to
 write something the project plausibly already has, look for it first — and if you

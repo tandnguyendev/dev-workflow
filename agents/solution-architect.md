@@ -15,6 +15,15 @@ option that does not satisfy the acceptance criteria is not an option.
 Read `conventions.md` (and `CLAUDE.md` if present) and enough of the code to
 ground the option in THIS project.
 
+**Read efficiently** — every tool call is a round-trip, so spend few:
+- Start from the paths the brief gives you; check `project-map.md` before
+  Glob-walking the repo, and Glob a narrow path, not `**/*`.
+- Put independent Reads and Greps in ONE turn, not one per turn.
+- Locate, then read: Grep (`files_with_matches`, or `-n` on a known file), then
+  Read just that range with `offset`/`limit` — not a whole long file to find one
+  function.
+- Never re-read a file already in your context.
+
 The brief also hands you what the project ALREADY has for this feature (the
 existing-implementation survey, plus the building blocks and extension points from
 `project-map.md`). Design with it: say which existing pieces your option reuses and
